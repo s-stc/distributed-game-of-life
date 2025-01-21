@@ -1,0 +1,201 @@
+import '@soundworks/helpers/polyfills.js';
+import { Client } from '@soundworks/core/client.js';
+import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
+import { html, render } from 'lit';
+
+import '@ircam/sc-components/sc-text.js';
+import '@ircam/sc-components/sc-number.js';
+import '@ircam/sc-components/sc-matrix.js';
+import '@ircam/sc-components/sc-button.js';
+import '@ircam/sc-components/sc-select.js';
+import '@ircam/sc-components/sc-radio.js';
+
+
+import '../components/sw-audit.js';
+
+// - General documentation: https://soundworks.dev/
+// - API documentation:     https://soundworks.dev/api
+// - Issue Tracker:         https://github.com/collective-soundworks/soundworks/issues
+// - Wizard & Tools:        `npx soundworks`
+
+async function main($container) {
+  /**
+   * Load configuration from config files and create the soundworks client
+   */
+  const config = loadConfig();
+  const client = new Client(config);
+
+  launcher.register(client, {
+    initScreensContainer: $container,
+    reloadOnVisibilityChange: false,
+  });
+
+  await client.start();
+
+  const global = await client.stateManager.attach('global');
+//   const cells = await client.stateManager.getCollection('cell');
+
+  // let grid = global.get('grid');
+  // let gridLength = global.get('gridLength');
+
+
+    // function resetGrid() { // réinitialiser la grille
+    //     grid = createBlankGrid(gridLength, gridLength);
+    //     global.set({grid});
+    //     renderApp();
+    // }
+
+  function renderApp() {
+    render(html`
+      <div class="controller-layout">
+        <header>
+          <h1>${client.config.app.name} | ${client.role}</h1>
+          <sw-audit .client="${client}"></sw-audit>
+        </header>
+        <section>
+          <sc-matrix
+            id="test-matrix"
+            .value=${global.get('grid')}
+            @change=${e => {
+              global.set({
+                  grid : e.detail.value,
+              });
+              console.log(e.detail.value);
+            }}
+          ></sc-matrix>
+
+          <div>
+              <sc-button
+                class="test-button"
+                selected=true
+                @input =${async (e) => {
+                  await global.set({ isPlaying : true });
+                  console.log(global.get('isPlaying'));
+                }}
+              >Start</sc-button>
+
+              <sc-button
+                class="test-button"
+                @input=${async () => {
+                  await global.set({ isPlaying : false });
+                  console.log(global.get('isPlaying'))
+                }}
+              >Stop</sc-button>
+
+              <sc-button
+                  class="test-button"
+                  @input=${async () => {
+                      await global.set({resetGrid : true });
+                      // resetGrid();
+                      console.log(global.get('grid'))
+                  }}
+              >Clear</sc-button>
+          </div>
+
+          <div>
+                <sc-text
+                    class='test-text'
+                >Pattern</sc-text>
+
+                <sc-select
+                    .options=${global.get('patternNames')}
+                    class='test-select'
+                    placeholder="select a pattern"
+                    @change=${ async function (e) {
+                      if (e.detail.value) {
+                        global.set({ pattern: e.detail.value });
+                      }
+                      renderApp();
+                    }}
+                ></sc-select>
+
+                <sc-text
+                    class='test-text'
+                >Sonification Mode</sc-text>
+
+                <sc-select
+                    options="${JSON.stringify(['mute', 'chromatic scale', 'whole-tone scale', 'octatonic scale', 'birds'])}"
+                    class='test-select'
+                    value=${global.get('sonificationMode')}
+                    @change=${function (e) {
+                        global.set({sonificationMode : e.detail.value});
+                        console.log(global.get('sonificationMode'));
+                        renderApp();
+                    }}
+                ></sc-select>
+          </div>
+
+          <div>
+            <sc-text
+                class="test-text"
+            >Grid length</sc-text>
+            <sc-number
+                integer
+                min="5"
+                max="100"
+                value=${global.get('gridLength')}
+                @input=${async function (e) {
+                    await global.set({gridLength : e.detail.value});
+                    console.log(global.get('gridLength'));
+                    // resetGrid();
+                    // global.set({grid});
+                    renderApp();
+                }}
+            ></sc-number>
+        </div>
+
+        <div>
+            <sc-text
+                class="test-text"
+            >Delay in ms</sc-text>
+            <sc-number
+                integer
+                min="20"
+                max="2000"
+                value=${global.get('delay')}
+                @input=${async (e) => {
+                    await global.set({delay : e.detail.value});
+                    console.log(global.get('delay'));
+                }}
+            ></sc-number>
+        </div>
+
+        <div>
+            <sc-text
+                class="test-text"
+            >Circular grid</sc-text>
+            <sc-radio
+                options="${JSON.stringify(['yes', 'no'])}"
+                class='test-radio'
+                value="no"
+                @change=${async function (e) {
+                    const circulargrid = e.detail.value;
+                    switch (circulargrid) {
+                        case 'yes':
+                            await global.set({modulo : true});
+                            console.log(global.get('modulo'));
+                            break;
+                        case 'no':
+                            await global.set({modulo : false});
+                            console.log(global.get('modulo'));
+                            break;
+                        default:
+                            break;
+                    }
+                    renderApp();
+                }}
+            ></sc-radio>
+        </div>
+
+        </section>
+      </div>
+    `, $container);
+  }
+
+  global.onUpdate(() => renderApp(), true);
+}
+
+launcher.execute(main, {
+  numClients: parseInt(new URLSearchParams(window.location.search).get('emulate')) || 1,
+  width: '50%',
+});
