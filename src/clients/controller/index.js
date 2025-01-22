@@ -35,15 +35,6 @@ async function main($container) {
   const global = await client.stateManager.attach('global');
 //   const cells = await client.stateManager.getCollection('cell');
 
-  // let grid = global.get('grid');
-  // let gridLength = global.get('gridLength');
-
-
-    // function resetGrid() { // réinitialiser la grille
-    //     grid = createBlankGrid(gridLength, gridLength);
-    //     global.set({grid});
-    //     renderApp();
-    // }
 
   function renderApp() {
     render(html`
@@ -86,7 +77,6 @@ async function main($container) {
                   class="test-button"
                   @input=${async () => {
                       await global.set({resetGrid : true });
-                      // resetGrid();
                       console.log(global.get('grid'))
                   }}
               >Clear</sc-button>
@@ -117,8 +107,8 @@ async function main($container) {
                     options="${JSON.stringify(['mute', 'chromatic scale', 'whole-tone scale', 'octatonic scale', 'birds'])}"
                     class='test-select'
                     value=${global.get('sonificationMode')}
-                    @change=${function (e) {
-                        global.set({sonificationMode : e.detail.value});
+                    @change=${async function (e) {
+                        await global.set({sonificationMode : e.detail.value});
                         console.log(global.get('sonificationMode'));
                         renderApp();
                     }}
@@ -137,8 +127,6 @@ async function main($container) {
                 @input=${async function (e) {
                     await global.set({gridLength : e.detail.value});
                     console.log(global.get('gridLength'));
-                    // resetGrid();
-                    // global.set({grid});
                     renderApp();
                 }}
             ></sc-number>

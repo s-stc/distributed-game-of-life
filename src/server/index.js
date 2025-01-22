@@ -70,10 +70,10 @@ const cells = await server.stateManager.getCollection('cell');
 let gridLength = global.get('gridLength');
 
 let grid = createBlankGrid(gridLength, gridLength);
-await global.set({grid});
+global.set({grid});
 console.log(await global.get('grid'));
 
-function resetGrid() { // réinitialiser la grille
+function resetGrid(gridLength) { // réinitialiser la grille
   grid = createBlankGrid(gridLength, gridLength);
   global.set({grid});
 }
@@ -82,6 +82,7 @@ function resetGrid() { // réinitialiser la grille
 function updateGrid() {  // mettre à jour l'état de la grille
   const modulo = global.get('modulo');
   const grid = global.get('grid');
+  const gridLength = global.get('gridLength');
   const newGrid = [];
   for (let y = 0; y < gridLength; y++) {
       newGrid[y] = [];
@@ -121,14 +122,17 @@ global.onUpdate(updates => {
         break;
       }
       case 'resetGrid': {
-        resetGrid();
+        const gridLength = global.get('gridLength');
+        resetGrid(gridLength);
         break;
       }
       case 'pattern': {
         if (value === 'random') {
+          const gridLength = global.get('gridLength');
           const grid = createRandomGrid(gridLength, gridLength);
           global.set({grid});
         } else {
+          const grid = global.get('grid');
           applyPattern(grid, patterns[value]);
           global.set({grid});
         }
@@ -146,6 +150,7 @@ global.onUpdate(updates => {
   }
 })
 
+// donner des coordonnées aux clients cells qui se connectent
 const cellsCoordinates = Object.fromEntries(generateCoordinates(gridLength)); // turn Map into Object
 
 cells.onAttach(async (cell) => {
