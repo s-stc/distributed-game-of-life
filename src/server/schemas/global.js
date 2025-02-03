@@ -20,6 +20,7 @@ export default {
       type: 'any',
       event: true,
     },
+
     patternNames: {
       type: 'any',
       default: [],
@@ -29,7 +30,12 @@ export default {
         type: 'integer',
         min: 20,
         max: 2000,
-        default: 100,
+        default: 200,
+    },
+
+    startTime: {
+      type: 'float',
+      default: 0,
     },
 
     modulo: {
@@ -41,6 +47,11 @@ export default {
         type: 'boolean',
         default: false,
     },
+
+    // isPlaying: {
+    //   type: 'any',
+    //   default: 'stop',
+    // },
 
     sonificationMode:{
         type:'enum',

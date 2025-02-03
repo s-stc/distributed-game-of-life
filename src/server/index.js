@@ -3,13 +3,13 @@ import { Server } from '@soundworks/core/server.js';
 import { loadConfig } from '@soundworks/helpers/node.js';
 
 import pluginPlatformInit from '@soundworks/plugin-platform-init/server.js';
-//import pluginPosition from '@soundworks/plugin-position/server.js';
-// import pluginCheckin from '@soundworks/plugin-checkin/server.js';
+import pluginSync from '@soundworks/plugin-sync/server.js';
+import pluginCheckin from '@soundworks/plugin-checkin/server.js';
 
 import globalSchema from './schemas/global.js';
 import cellSchema from './schemas/cell.js';
 
-import { generateCoordinates } from '../lib/hostnameToCoordinates.js';
+import { generateCoordinates, generateHostnamesToCoordinates } from '../lib/hostnameToCoordinates.js';
 import { createBlankGrid, createRandomGrid, applyPattern} from '../lib/createGrid.js';
 import { countNeighbors, countModuloNeighbors} from '../lib/numNeighbors.js';
 import updateCell from '../lib/updateCell.js';
@@ -44,9 +44,15 @@ server.useDefaultApplicationTemplate();
 // server.pluginManager.register('my-plugin', plugin);
 // server.stateManager.registerSchema('my-schema', definition);
 
-//server.pluginManager.register('platform-init', pluginPlatformInit);
-//server.pluginManager.register('position', pluginPosition);
-//server.pluginManager.register('checkin', pluginCheckin);
+const GRID_LENGTH = 6;
+
+server.pluginManager.register('platform-init', pluginPlatformInit);
+server.pluginManager.register('sync', pluginSync);
+
+server.pluginManager.register('checkin', pluginCheckin, {
+    capacity: GRID_LENGTH * GRID_LENGTH,
+    data: generateCoordinates(GRID_LENGTH),
+});
 
 server.stateManager.registerSchema('global', globalSchema);
 server.stateManager.registerSchema('cell', cellSchema);
@@ -58,6 +64,7 @@ await server.start();
 
 const global = await server.stateManager.create('global', {
   patternNames: Object.keys(patterns).concat(['random']),
+  gridLength: GRID_LENGTH,
 });
 console.log(global.getValues());
 
@@ -65,21 +72,18 @@ const cells = await server.stateManager.getCollection('cell');
 
 // and do your own stuff!
 
-// fonction pour donner un hostname aux clients émulés + renvoyer hostname & position aux clients
-
 let gridLength = global.get('gridLength');
 
-let grid = createBlankGrid(gridLength, gridLength);
+let grid = createBlankGrid(gridLength, gridLength); // crée une grille vide
 global.set({grid});
 console.log(await global.get('grid'));
 
-function resetGrid(gridLength) { // réinitialiser la grille
+function resetGrid(gridLength) { // fonction pour réinitialiser la grille
   grid = createBlankGrid(gridLength, gridLength);
   global.set({grid});
 }
 
-// règles du jeu de la vie
-function updateGrid() {  // mettre à jour l'état de la grille
+function updateGrid() {  // fonction pour mettre à jour l'état de la grille
   const modulo = global.get('modulo');
   const grid = global.get('grid');
   const gridLength = global.get('gridLength');
@@ -105,11 +109,24 @@ function gameLoop() {
   const delay = global.get('delay');
   if (isPlaying === true) {
       updateGrid();
-      // playSounds(sonificationMode); --> à mettre du côté des clients
       setTimeout(gameLoop, delay);
   }
 }
 
+const sync = await server.pluginManager.get('sync');
+// faire en sorte que lorsqu'on clique sur "Start" ou "Delay", on génère un "startTime" dans l'état global
+server.stateManager.registerUpdateHook('global', updates => {
+  if ('isPlaying' in updates || 'delay' in updates) {
+    const startTime = sync.getSyncTime();
+
+    return {
+      startTime,
+      ...updates,
+    };
+  }
+});
+
+// réagir aux changements provoqués par le controller
 global.onUpdate(updates => {
   for (let key in updates) {
     const value = updates[key];
@@ -132,7 +149,9 @@ global.onUpdate(updates => {
           const grid = createRandomGrid(gridLength, gridLength);
           global.set({grid});
         } else {
-          const grid = global.get('grid');
+          // const grid = global.get('grid');
+          const gridLength = global.get('gridLength');
+          const grid = createBlankGrid(gridLength, gridLength);
           applyPattern(grid, patterns[value]);
           global.set({grid});
         }
@@ -150,23 +169,25 @@ global.onUpdate(updates => {
   }
 })
 
-// donner des coordonnées aux clients cells qui se connectent
-const cellsCoordinates = Object.fromEntries(generateCoordinates(gridLength)); // turn Map into Object
+// donner des coordonnées aux clients NODE cells qui se connectent
+// const cellsCoordinates = Object.fromEntries(generateHostnamesToCoordinates(gridLength)); // turn Map into Object
 
-cells.onAttach(async (cell) => {
-    let hostname = cell.get('hostname');
-    if (hostname === 'emulated') {
-        console.log('cells.length', cells.length); // la collection change de taille au fur et à mesure qu'un client se connecte
-        const index = cells.length - 1 ; // cela permet d'avoir un indice qui croit à chaque nouveau client
-        const cellsHostnames = Object.keys(cellsCoordinates); // est-ce que j'ai le droit d'utiliser cette méthode sur une map?
-        if (index >=0 && index < cells.length){
-            hostname = cellsHostnames[index];
-        }
-    }
-    const cellPosition = cellsCoordinates[hostname];
-    const { x, y } = cellPosition;
-    await cell.set( {hostname, y,  x } ); // aller chercher hostname et position
-}); // when a state is created --> give coordinates + neighbors?
+// cells.onAttach(async (cell) => {
+//     let hostname = cell.get('hostname');
+//     if (hostname === 'emulated') {
+//         console.log('cells.length', cells.length); // la collection change de taille au fur et à mesure qu'un client se connecte
+//         const index = cells.length - 1 ; // cela permet d'avoir un indice qui croit à chaque nouveau client
+//         const cellsHostnames = Object.keys(cellsCoordinates); // est-ce que j'ai le droit d'utiliser cette méthode sur une map?
+//         if (index >=0 && index < cells.length){
+//             hostname = cellsHostnames[index];
+//         }
+//     }
+//     const cellPosition = cellsCoordinates[hostname];
+//     const { x, y } = cellPosition;
+//     await cell.set( {hostname, y,  x } ); // aller chercher hostname et position
+// }); // when a state is created --> give coordinates + neighbors?
 
-cells.onDetach(() => dostuff()); // when a state is deleted --> give coordinates + neighbors
-cells.onUpdate(() => dostuff()); // when a state is updated --> give neighbors
+// cells.onDetach(() => dostuff()); // when a state is deleted --> give coordinates + neighbors
+// cells.onUpdate(() => dostuff()); // when a state is updated --> give neighbors
+
+// comment faire quand des nodes et des clients browser se connectent, pour ne pas qu'ils aient deux fois le mm {x, y}

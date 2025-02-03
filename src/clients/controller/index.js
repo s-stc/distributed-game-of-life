@@ -9,6 +9,8 @@ import '@ircam/sc-components/sc-matrix.js';
 import '@ircam/sc-components/sc-button.js';
 import '@ircam/sc-components/sc-select.js';
 import '@ircam/sc-components/sc-radio.js';
+import '@ircam/sc-components/sc-slider.js';
+import '@ircam/sc-components/sc-transport.js';
 
 
 import '../components/sw-audit.js';
@@ -45,7 +47,7 @@ async function main($container) {
         </header>
         <section>
           <sc-matrix
-            id="test-matrix"
+            class="test-matrix"
             .value=${global.get('grid')}
             @change=${e => {
               global.set({
@@ -73,6 +75,14 @@ async function main($container) {
                 }}
               >Stop</sc-button>
 
+              <!-- <sc-transport
+                value=${global.get('isPlaying')}
+                .buttons=${["play", "stop"]}
+                @input=${async function (e) {
+                  await global.set({isPlaying : e.detail.value})
+                }}
+              ></sc-transport> -->
+
               <sc-button
                   class="test-button"
                   @input=${async () => {
@@ -93,7 +103,7 @@ async function main($container) {
                     placeholder="select a pattern"
                     @change=${ async function (e) {
                       if (e.detail.value) {
-                        global.set({ pattern: e.detail.value });
+                        await global.set({ pattern: e.detail.value });
                       }
                       renderApp();
                     }}
@@ -140,7 +150,7 @@ async function main($container) {
                 integer
                 min="20"
                 max="2000"
-                value=${global.get('delay')}
+                .value=${global.get('delay')}
                 @input=${async (e) => {
                     await global.set({delay : e.detail.value});
                     console.log(global.get('delay'));
@@ -173,6 +183,22 @@ async function main($container) {
                     renderApp();
                 }}
             ></sc-radio>
+        </div>
+        <div>
+          <sc-text
+            class="test-text"
+          >Volume</sc-text>
+          <sc-slider
+            min="-60"
+            max="6"
+            .value=${global.get('volume')}
+            step="0.1"
+            number-box=true
+            @input=${async function (e) {
+              await global.set({volume: e.detail.value});
+              console.log("volume en dB", global.get('volume'));
+            }}
+          ></sc-slider>
         </div>
 
         </section>

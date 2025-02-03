@@ -1,7 +1,7 @@
 // associer un hostname à des coordonnées
 
 // Set() method?
-// Map() method --> fonctionne pour des paires key value 
+// Map() method --> fonctionne pour des paires key value
 // const map1 = new Map();
 // map1.set("11", {x: 0, y: 0})
 // map1.set("12", {x: 1, y: 0})
@@ -12,15 +12,15 @@
 // y = hostname.substr(12) - 1 ;
 
 // cells = await server.StateManager.getCollection ('cell'); // en fait ça ne va pas marcher car ça change dès qu'un client se connecte potentiellement
-// const gridSize = Math.ceil(Math.sqrt(cells.length));  
+// const gridSize = Math.ceil(Math.sqrt(cells.length));
 // for (let i = 1 ; i <= gridSize ; i++) {
 //  for (let j = 1 ; j <= gridSize ; j++) {
-//  hostname = "dotpi-dev-0" + i.toString() + j.toString() ; 
+//  hostname = "dotpi-dev-0" + i.toString() + j.toString() ;
 //  hostname = `dotpi-dev-0${j}${i}`; // façon plus moderne -> template strings (ou template literals)
 //  }
 // }
 
-export function generateCoordinates(gridSize) {
+export function generateHostnamesToCoordinates(gridSize) {
   const cellsCoordinates = new Map();
 
   for (let i = 1 ; i <= gridSize ; i++) {
@@ -29,8 +29,19 @@ export function generateCoordinates(gridSize) {
       cellsCoordinates.set(hostname, {x : j-1, y : i-1})
     }
   }
-  
+
   return cellsCoordinates;
+}
+
+export function generateCoordinates(gridSize){
+  const cellsCoordinates = [];
+
+  for (let i = 1 ; i <= gridSize ; i++) {
+    for (let j = 1 ; j <= gridSize ; j++) {
+      cellsCoordinates.push({x : j-1, y: i-1})
+    }
+  }
+  return cellsCoordinates
 }
 
 // export const clientsCoordinates = {

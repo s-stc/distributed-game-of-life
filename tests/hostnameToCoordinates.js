@@ -3,14 +3,14 @@
 // console.log('grid size :', gridSize);
 // for (let i = 1 ; i <= gridSize ; i++) {
 //   for (let j = 1 ; j <= gridSize ; j++) {
-// // hostname = JSON.stringify(i) + JSON.stringify(j) // ou alors 
-//     const hostname = `dotpi-dev-0${j}${i}`; // template srtings 
+// // hostname = JSON.stringify(i) + JSON.stringify(j) // ou alors
+//     const hostname = `dotpi-dev-0${j}${i}`; // template srtings
 // console.log(hostname)
 // }
 // }
 import assert from 'node:assert';
 import test from 'node:test';
-import { generateCoordinates } from '../src/utils/hostnameToCoordinates.js';
+import { generateCoordinates } from '../src/lib/hostnameToCoordinates.js';
 
 test('stuff', () => {
     const expected = new Map(Object.entries({

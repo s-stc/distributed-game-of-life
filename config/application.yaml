@@ -6,3 +6,5 @@ clients:
     default: true
   controller:
     target: browser
+  node_cell:
+    target: node
