@@ -51,7 +51,7 @@ server.pluginManager.register('sync', pluginSync);
 
 server.pluginManager.register('checkin', pluginCheckin, {
     capacity: GRID_LENGTH * GRID_LENGTH,
-    data: generateCoordinates(GRID_LENGTH),
+    // data: generateCoordinates(GRID_LENGTH),
 });
 
 server.stateManager.defineClass('global', globalSchema);
@@ -108,7 +108,6 @@ function gameLoop() {
   const isPlaying = global.get('isPlaying');
   const delay = global.get('delay');
   if (isPlaying === 'play') {
-  // if (isPlaying === true) {
       updateGrid();
       setTimeout(gameLoop, delay);
   }
@@ -160,7 +159,6 @@ global.onUpdate(updates => {
       }
       case 'isPlaying': {
         if (value === 'play'){
-        // if (value === true){
           gameLoop();
         }
         break;

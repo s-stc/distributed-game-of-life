@@ -7,6 +7,7 @@ import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import { decibelToLinear } from '@ircam/sc-utils';
 import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular } from '../../lib/sonificationModes.js';
+import { generateCoordinates } from '../lib/hostnameToCoordinates.js';
 
 import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js';
 import pluginSync from '@soundworks/plugin-sync/client.js';
@@ -104,18 +105,17 @@ async function main($container) {
   const scheduler = new Scheduler(() => sync.getSyncTime(), {
     currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
   })
-  // const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname()); // pour l'environnement node
-  // const hostname = 'emulated';
+
 
   const global = await client.stateManager.attach('global');
-  // const cell = await client.stateManager.create('cell', {
-  //   hostname
-  // });
-
-  // const x = await cell.get('x'); // version où le serveur attribue x et y en fonction du hostname
-  // const y = await cell.get('y'); //
   const gridLength = global.get('gridLength');
-  const {x, y} = await checkin.getData(); // version avec le plugin Checkin
+  let x = null;
+  let y = null;
+  const coordinates = generateCoordinates(gridLength);
+  const data = coordinates[checkin.getIndex()];
+  x = data.x;
+  y = data.y;
+
   console.log(x,y);
 
 
@@ -180,7 +180,6 @@ async function main($container) {
       switch (key) {
         case 'isPlaying': {
           if (value === 'play') {
-          // if (value === true) {
             const startTime = global.get('startTime');
             scheduler.add(processor, startTime);
           } else if (scheduler.has(processor)) {

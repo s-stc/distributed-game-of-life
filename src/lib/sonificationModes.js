@@ -97,7 +97,7 @@ export function triggerSoundFileMode2(audioContext, gridLength, buffer, volume, 
 }
 
 export function triggerSoundFileGranular(audioContext, gridLength, buffer, volume, x, y) {
-  console.log('triggerSoundFileGranular')
+  // console.log('triggerSoundFileGranular')
   const output = audioContext.createGain();
   output.connect(audioContext.destination);
   output.gain.value = volume;

@@ -55,23 +55,6 @@ async function main($container) {
           ></sc-matrix>
 
           <div>
-              <!-- <sc-button
-                class="test-button"
-                selected=true
-                @input =${async (e) => {
-                  await global.set({ isPlaying : true });
-                  console.log(global.get('isPlaying'));
-                }}
-              >Start</sc-button>
-
-              <sc-button
-                class="test-button"
-                @input=${async () => {
-                  await global.set({ isPlaying : false });
-                  console.log(global.get('isPlaying'))
-                }}
-              >Stop</sc-button> -->
-
               <sc-transport
                 value=${global.get('isPlaying')}
                 .buttons=${["play", "stop"]}
@@ -85,7 +68,7 @@ async function main($container) {
                   class="test-button"
                   @input=${async () => {
                       await global.set({resetGrid : true });
-                      console.log(global.get('grid'))
+                      // console.log(global.get('grid'))
                   }}
               >Clear</sc-button>
           </div>
@@ -134,7 +117,7 @@ async function main($container) {
                 value=${global.get('gridLength')}
                 @input=${async function (e) {
                     await global.set({gridLength : e.detail.value});
-                    console.log(global.get('gridLength'));
+                    console.log('grid size:', global.get('gridLength'));
                     renderApp();
                 }}
             ></sc-number>
@@ -143,7 +126,7 @@ async function main($container) {
         <div>
             <sc-text
                 class="test-text"
-            >Delay in ms</sc-text>
+            >Delay (ms)</sc-text>
             <sc-number
                 integer
                 min="20"
@@ -151,7 +134,7 @@ async function main($container) {
                 .value=${global.get('delay')}
                 @input=${async (e) => {
                     await global.set({delay : e.detail.value});
-                    console.log(global.get('delay'));
+                    console.log('Delay in ms:', global.get('delay'));
                 }}
             ></sc-number>
         </div>
@@ -169,11 +152,11 @@ async function main($container) {
                     switch (circulargrid) {
                         case 'yes':
                             await global.set({modulo : true});
-                            console.log(global.get('modulo'));
+                            console.log('circular grid:', global.get('modulo'));
                             break;
                         case 'no':
                             await global.set({modulo : false});
-                            console.log(global.get('modulo'));
+                            console.log('circular grid:', global.get('modulo'));
                             break;
                         default:
                             break;
@@ -185,7 +168,7 @@ async function main($container) {
         <div>
           <sc-text
             class="test-text"
-          >Volume</sc-text>
+          >Volume (dB)</sc-text>
           <sc-slider
             min="-60"
             max="6"
@@ -194,7 +177,7 @@ async function main($container) {
             number-box=true
             @input=${async function (e) {
               await global.set({volume: e.detail.value});
-              console.log("volume en dB", global.get('volume'));
+              console.log("volume en dB:", global.get('volume'));
             }}
           ></sc-slider>
         </div>

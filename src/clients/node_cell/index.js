@@ -11,6 +11,7 @@ import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import { decibelToLinear } from '@ircam/sc-utils';
 import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular } from '../../lib/sonificationModes.js';
+import { generateCoordinates, generateHostnamesToCoordinates } from '../lib/hostnameToCoordinates.js';
 
 
 // - General documentation: https://soundworks.dev/
@@ -59,6 +60,7 @@ async function bootstrap() {
   const chromBuffers = [];
   const mode1Buffers = [];
   const mode2Buffers = [];
+  const birdsBuffer = await loader.load(`public/audio/birds.wav`);
 
   for (let i = 1; i <= 10; i++) {
     const buffer = await loader.load(`public/audio/sample${i}.wav`);
@@ -75,26 +77,34 @@ async function bootstrap() {
     mode2Buffers.push(buffer);
   }
 
-  const birdsBuffer = await loader.load(`public/audio/birds.wav`);
 
   // initialisation
   const global = await client.stateManager.attach('global');
-  const checkin = await client.pluginManager.get('checkin')
-  // const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname()); // pour l'environnement node
-  // const cell = await client.stateManager.create('cell', {
-  //   hostname
-  // });
-  // const x = await cell.get('x');
-  // const y = await cell.get('y');
-  const {x, y} = await checkin.getData(); // version avec le plugin Checkin
+  const checkin = await client.pluginManager.get('checkin');
+  const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname());
   const gridLength = global.get('gridLength');
-  console.log('x:', x, 'y:', y, 'grid length;', gridLength);
+  const realCoords = generateHostnamesToCoordinates(gridLength);
+  const emulatedCoords = generateCoordinates(gridLength);
+
+  let x = null;
+  let y = null;
+
+  if (realCoords[hostname] !== undefined) {
+    const data = realCoords[hostname];
+    x = data.x;
+    y = data.y;
+  } else {
+    const data = emulatedCoords[checkin.getIndex()]; // position aléatoire en fonction de l'index checkin
+    x = data.x;
+    y = data.y;
+  }
+
+  console.log('x:', x, 'y:', y, 'grid length:', gridLength);
 
   const sync = await client.pluginManager.get('sync');
   const scheduler = new Scheduler(() => sync.getSyncTime(), {
     currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
-  })
-
+  });
 
   // sonification
   const sonificationStrategies = {
@@ -134,7 +144,7 @@ async function bootstrap() {
   // audio engine
   const processor = (schedulerTime, audioTime) => {
     const sonification = global.get('sonificationMode');
-    const grid = global.get('grid');
+    const grid = global.getUnsafe('grid');
     const now = sync.getSyncTime();
 
     if (schedulerTime > now) {
@@ -147,7 +157,6 @@ async function bootstrap() {
       }
     }
 
-    console.log('pouet');
     return schedulerTime + global.get('delay') / 1000;
   };
 
@@ -158,7 +167,7 @@ async function bootstrap() {
 
       switch (key) {
         case 'isPlaying': {
-          if (value === true) {
+          if (value === 'play') {
             const startTime = global.get('startTime');
             scheduler.add(processor, startTime);
           } else if (scheduler.has(processor)) {
