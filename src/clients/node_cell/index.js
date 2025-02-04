@@ -11,7 +11,7 @@ import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import { decibelToLinear } from '@ircam/sc-utils';
 import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular } from '../../lib/sonificationModes.js';
-import { generateCoordinates, generateHostnamesToCoordinates } from '../lib/hostnameToCoordinates.js';
+import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/hostnameToCoordinates.js';
 
 
 // - General documentation: https://soundworks.dev/
@@ -90,7 +90,7 @@ async function bootstrap() {
   let y = null;
 
   if (realCoords[hostname] !== undefined) {
-    const data = realCoords[hostname];
+    const data = realCoords[hostname]; // position attribuée en fonction du hostname et donc de la vraie disposition spatiale
     x = data.x;
     y = data.y;
   } else {
@@ -99,7 +99,7 @@ async function bootstrap() {
     y = data.y;
   }
 
-  console.log('x:', x, 'y:', y, 'grid length:', gridLength);
+  console.log('x:', x, 'y:', y);
 
   const sync = await client.pluginManager.get('sync');
   const scheduler = new Scheduler(() => sync.getSyncTime(), {
@@ -141,7 +141,6 @@ async function bootstrap() {
     },
   }
 
-  // audio engine
   const processor = (schedulerTime, audioTime) => {
     const sonification = global.get('sonificationMode');
     const grid = global.getUnsafe('grid');
@@ -160,7 +159,7 @@ async function bootstrap() {
     return schedulerTime + global.get('delay') / 1000;
   };
 
-// fonction pour mettre à jour
+
   global.onUpdate(updates => {
     for (let key in updates) {
       const value = updates[key];

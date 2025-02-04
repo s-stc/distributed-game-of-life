@@ -75,43 +75,40 @@ async function main($container) {
 
   // téléchargement des fichiers sons
   const loader = new AudioBufferLoader(audioContext); // permet que ça marche aussi pour les clients node
-  // sinon import loadAudioBuffer from '../../lib/load-audio-buffer.js';
 
-  const chromBuffers = [];
-  const mode1Buffers = [];
+  const chromBuffers = []; // pizz
+  const mode1Buffers = []; // clarinette
   const mode2Buffers = [];
+  const birdsBuffer = await loader.load(`audio/birds.wav`);
 
-  for (let i = 1; i <= 10; i++) { // chargement de tous les samples grace à une boucle
+  for (let i = 1; i <= 10; i++) {
     const buffer = await loader.load(`audio/sample${i}.wav`);
     chromBuffers.push(buffer);
   }
 
-  for (let j = 0; j <= 10; j++) { // chargement de tous les samples grace à une boucle
+  for (let j = 0; j <= 10; j++) {
     const buffer = await loader.load(`audio/mode1sample${j}.wav`);
     mode1Buffers.push(buffer);
   }
 
-  for (let j = 0; j <= 10; j++) { // chargement de tous les samples grace à une boucle
+  for (let j = 0; j <= 10; j++) {
     const buffer = await loader.load(`audio/mode2sample${j}.wav`);
     mode2Buffers.push(buffer);
   }
 
-  const birdsBuffer = await loader.load(`audio/birds.wav`);
-
   // initialisation
   const checkin = await client.pluginManager.get('checkin')
   const sync = await client.pluginManager.get('sync');
+  const global = await client.stateManager.attach('global');
+  const gridLength = global.get('gridLength');
+  const coordinates = generateCoordinates(gridLength);
+  let x = null;
+  let y = null;
 
   const scheduler = new Scheduler(() => sync.getSyncTime(), {
     currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
   })
 
-
-  const global = await client.stateManager.attach('global');
-  const gridLength = global.get('gridLength');
-  let x = null;
-  let y = null;
-  const coordinates = generateCoordinates(gridLength);
   const data = coordinates[checkin.getIndex()];
   x = data.x;
   y = data.y;
