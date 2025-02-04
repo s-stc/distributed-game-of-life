@@ -10,7 +10,7 @@ import pluginCheckin from '@soundworks/plugin-checkin/client.js';
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import { decibelToLinear } from '@ircam/sc-utils';
-import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular } from '../../lib/sonificationModes.js';
+import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular, triggerSoundFileModal } from '../../lib/sonificationModes.js';
 import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/hostnameToCoordinates.js';
 
 
@@ -54,28 +54,6 @@ async function bootstrap() {
 
   console.log(`Hello ${client.config.app.name}!`);
 
-  // loading audio files
-  const loader = new AudioBufferLoader(audioContext);
-
-  const chromBuffers = [];
-  const mode1Buffers = [];
-  const mode2Buffers = [];
-  const birdsBuffer = await loader.load(`public/audio/birds.wav`);
-
-  for (let i = 1; i <= 10; i++) {
-    const buffer = await loader.load(`public/audio/sample${i}.wav`);
-    chromBuffers.push(buffer);
-  }
-
-  for (let j = 0; j <= 10; j++) {
-    const buffer = await loader.load(`public/audio/mode1sample${j}.wav`);
-    mode1Buffers.push(buffer);
-  }
-
-  for (let j = 0; j <= 10; j++) {
-    const buffer = await loader.load(`public/audio/mode2sample${j}.wav`);
-    mode2Buffers.push(buffer);
-  }
 
 
   // initialisation
@@ -85,6 +63,10 @@ async function bootstrap() {
   const gridLength = global.get('gridLength');
   const realCoords = generateHostnamesToCoordinates(gridLength);
   const emulatedCoords = generateCoordinates(gridLength);
+  const sync = await client.pluginManager.get('sync');
+  const scheduler = new Scheduler(() => sync.getSyncTime(), {
+    currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
+  });
 
   let x = null;
   let y = null;
@@ -101,10 +83,29 @@ async function bootstrap() {
 
   console.log('x:', x, 'y:', y);
 
-  const sync = await client.pluginManager.get('sync');
-  const scheduler = new Scheduler(() => sync.getSyncTime(), {
-    currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
-  });
+  // loading audio files
+  const loader = new AudioBufferLoader(audioContext);
+
+  const chromBuffers = [];
+  const mode1Buffers = [];
+  const mode2Buffers = [];
+  const birdsBuffer = await loader.load(`public/audio/birds.wav`);
+  const modalBuffer = await loader.load(`public/audio/modalsample${y}${x}.wav`);
+
+  for (let i = 1; i <= 10; i++) {
+    const buffer = await loader.load(`public/audio/sample${i}.wav`);
+    chromBuffers.push(buffer);
+  }
+
+  for (let j = 0; j <= 10; j++) {
+    const buffer = await loader.load(`public/audio/mode1sample${j}.wav`);
+    mode1Buffers.push(buffer);
+  }
+
+  for (let j = 0; j <= 10; j++) {
+    const buffer = await loader.load(`public/audio/mode2sample${j}.wav`);
+    mode2Buffers.push(buffer);
+  }
 
   // sonification
   const sonificationStrategies = {
@@ -132,6 +133,12 @@ async function bootstrap() {
       const volume = decibelToLinear(global.get('volume'));
       console.log("volume", volume);
       triggerSoundFileMode2(audioContext, gridLength, buffer, volume, x, y);
+    },
+    'modal scale': (x, y) => {
+      const buffer = modalBuffer;
+      const volume = decibelToLinear(global.get('volume'));
+      console.log("volume", volume);
+      triggerSoundFileModal(audioContext, gridLength, buffer, volume, x, y);
     },
     'birds': (x, y) => {
       const buffer = birdsBuffer;

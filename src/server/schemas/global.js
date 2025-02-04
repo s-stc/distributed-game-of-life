@@ -43,12 +43,7 @@ export default {
         default: false,
     },
 
-    // isPlaying: { // pour les boutons start / stop
-    //     type: 'boolean',
-    //     default: false,
-    // },
-
-    isPlaying: { // pour le bouton sc-transport
+    isPlaying: {
       type: 'string',
       default: null,
       nullable: true,
@@ -56,7 +51,7 @@ export default {
 
     sonificationMode:{
         type:'enum',
-        list: ['mute', 'chromatic scale', 'whole-tone scale', 'octatonic scale', 'birds'],
+        list: ['mute', 'chromatic scale', 'whole-tone scale', 'octatonic scale', 'birds', 'modal scale'],
         default: 'mute',
     },
 

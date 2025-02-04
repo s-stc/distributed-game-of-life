@@ -96,6 +96,34 @@ export function triggerSoundFileMode2(audioContext, gridLength, buffer, volume, 
   src.start();
 }
 
+export function triggerSoundFileModal(audioContext, gridLength, buffer, volume, x, y) {
+  const output = audioContext.createGain();
+  output.connect(audioContext.destination);
+  output.gain.value = volume;
+
+  const boost = audioContext.createGain()
+  boost.gain.value = 4;
+  boost.connect(output);
+
+  const panner = audioContext.createStereoPanner();
+  panner.pan.value = (2 * x / (gridLength - 1)) - 1;
+  panner.connect(boost);
+
+  const now = audioContext.currentTime;
+  const env = audioContext.createGain();
+  env.gain.value = 0;
+  env.gain.setValueAtTime(0, now);
+  env.gain.linearRampToValueAtTime(1, now + 0.05);
+  env.gain.exponentialRampToValueAtTime(0.0001, now + 3);
+  env.connect(panner);
+
+  const src = audioContext.createBufferSource();
+  src.buffer = buffer;
+  src.connect(env);
+  src.start();
+}
+
+
 export function triggerSoundFileGranular(audioContext, gridLength, buffer, volume, x, y) {
   // console.log('triggerSoundFileGranular')
   const output = audioContext.createGain();

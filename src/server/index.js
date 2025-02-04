@@ -31,7 +31,6 @@ console.log(`
 --------------------------------------------------------
 `);
 
-throw new Error('line 34');
 /**
  * Create the soundworks server
  */

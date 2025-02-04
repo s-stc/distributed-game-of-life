@@ -95,7 +95,7 @@ async function main($container) {
                 >Sonification Mode</sc-text>
 
                 <sc-select
-                    options="${JSON.stringify(['mute', 'chromatic scale', 'whole-tone scale', 'octatonic scale', 'birds'])}"
+                    options="${JSON.stringify(['mute', 'chromatic scale', 'whole-tone scale', 'octatonic scale', 'modal scale', 'birds'])}"
                     class='test-select'
                     value=${global.get('sonificationMode')}
                     @change=${async function (e) {

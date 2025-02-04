@@ -6,8 +6,8 @@ import { html, render } from 'lit';
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import { decibelToLinear } from '@ircam/sc-utils';
-import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular } from '../../lib/sonificationModes.js';
-import { generateCoordinates } from '../lib/hostnameToCoordinates.js';
+import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular, triggerSoundFileModal } from '../../lib/sonificationModes.js';
+import { generateCoordinates } from '../../lib/hostnameToCoordinates.js';
 
 import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js';
 import pluginSync from '@soundworks/plugin-sync/client.js';
@@ -73,29 +73,6 @@ async function main($container) {
    */
   await client.start();
 
-  // téléchargement des fichiers sons
-  const loader = new AudioBufferLoader(audioContext); // permet que ça marche aussi pour les clients node
-
-  const chromBuffers = []; // pizz
-  const mode1Buffers = []; // clarinette
-  const mode2Buffers = [];
-  const birdsBuffer = await loader.load(`audio/birds.wav`);
-
-  for (let i = 1; i <= 10; i++) {
-    const buffer = await loader.load(`audio/sample${i}.wav`);
-    chromBuffers.push(buffer);
-  }
-
-  for (let j = 0; j <= 10; j++) {
-    const buffer = await loader.load(`audio/mode1sample${j}.wav`);
-    mode1Buffers.push(buffer);
-  }
-
-  for (let j = 0; j <= 10; j++) {
-    const buffer = await loader.load(`audio/mode2sample${j}.wav`);
-    mode2Buffers.push(buffer);
-  }
-
   // initialisation
   const checkin = await client.pluginManager.get('checkin')
   const sync = await client.pluginManager.get('sync');
@@ -114,6 +91,31 @@ async function main($container) {
   y = data.y;
 
   console.log(x,y);
+
+  // téléchargement des fichiers sons
+  const loader = new AudioBufferLoader(audioContext); // permet que ça marche aussi pour les clients node
+
+  const chromBuffers = []; // pizz
+  const mode1Buffers = []; // clarinette
+  const mode2Buffers = [];
+  const birdsBuffer = await loader.load(`audio/birds.wav`);
+  const modalBuffer = await loader.load(`audio/modalsample${y}${x}.wav`);
+
+  for (let i = 1; i <= 10; i++) {
+    const buffer = await loader.load(`audio/sample${i}.wav`);
+    chromBuffers.push(buffer);
+  }
+
+  for (let j = 0; j <= 10; j++) {
+    const buffer = await loader.load(`audio/mode1sample${j}.wav`);
+    mode1Buffers.push(buffer);
+  }
+
+  for (let j = 0; j <= 10; j++) {
+    const buffer = await loader.load(`audio/mode2sample${j}.wav`);
+    mode2Buffers.push(buffer);
+  }
+
 
 
   // sonification
@@ -142,6 +144,11 @@ async function main($container) {
         const volume = decibelToLinear(global.get('volume'));
         console.log("volume", volume);
         triggerSoundFileMode2(audioContext, gridLength, buffer, volume, x, y);
+    },
+    'modal scale' : (x, y) => {
+      const buffer = modalBuffer;
+      const volume = decibelToLinear(global.get('volume'));
+      triggerSoundFileModal(audioContext, gridLength, buffer, volume, x, y);
     },
     'birds': (x, y) => {
         const buffer = birdsBuffer;
