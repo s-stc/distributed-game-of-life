@@ -1,6 +1,17 @@
 import '@soundworks/helpers/polyfills.js';
+import os from 'node:os';
 import { Client } from '@soundworks/core/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/node.js';
+import { AudioContext } from 'node-web-audio-api';
+
+import pluginSync from '@soundworks/plugin-sync/client.js';
+import pluginCheckin from '@soundworks/plugin-checkin/client.js';
+
+import { AudioBufferLoader } from '@ircam/sc-loader';
+import { Scheduler } from '@ircam/sc-scheduling';
+import { decibelToLinear } from '@ircam/sc-utils';
+import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular } from '../../lib/sonificationModes.js';
+
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -14,11 +25,18 @@ async function bootstrap() {
   const config = loadConfig(process.env.ENV, import.meta.url);
   const client = new Client(config);
 
+  const audioContext = new AudioContext();
+
   /**
    * Register some soundworks plugins, you will need to install the plugins
    * before hand (run `npx soundworks` for help)
    */
   // client.pluginManager.register('my-plugin', plugin);
+
+  client.pluginManager.register('checkin', pluginCheckin);
+  client.pluginManager.register('sync', pluginSync, {
+    getTimefunction: () => audioContext.currentTime,
+  });
 
   /**
    * Register the soundworks client into the launcher
@@ -34,8 +52,126 @@ async function bootstrap() {
   await client.start();
 
   console.log(`Hello ${client.config.app.name}!`);
-}
 
+  // loading audio files
+  const loader = new AudioBufferLoader(audioContext);
+
+  const chromBuffers = [];
+  const mode1Buffers = [];
+  const mode2Buffers = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const buffer = await loader.load(`public/audio/sample${i}.wav`);
+    chromBuffers.push(buffer);
+  }
+
+  for (let j = 0; j <= 10; j++) {
+    const buffer = await loader.load(`public/audio/mode1sample${j}.wav`);
+    mode1Buffers.push(buffer);
+  }
+
+  for (let j = 0; j <= 10; j++) {
+    const buffer = await loader.load(`public/audio/mode2sample${j}.wav`);
+    mode2Buffers.push(buffer);
+  }
+
+  const birdsBuffer = await loader.load(`public/audio/birds.wav`);
+
+  // initialisation
+  const global = await client.stateManager.attach('global');
+  const checkin = await client.pluginManager.get('checkin')
+  // const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname()); // pour l'environnement node
+  // const cell = await client.stateManager.create('cell', {
+  //   hostname
+  // });
+  // const x = await cell.get('x');
+  // const y = await cell.get('y');
+  const {x, y} = await checkin.getData(); // version avec le plugin Checkin
+  const gridLength = global.get('gridLength');
+  console.log('x:', x, 'y:', y, 'grid length;', gridLength);
+
+  const sync = await client.pluginManager.get('sync');
+  const scheduler = new Scheduler(() => sync.getSyncTime(), {
+    currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
+  })
+
+
+  // sonification
+  const sonificationStrategies = {
+    'mute': () => {},
+    'chromatic scale': (x, y) => {
+      const buffer = chromBuffers[x];
+      const volume = decibelToLinear(global.get('volume'));
+      console.log("volume", volume);
+      triggerSoundFile(audioContext, gridLength, buffer, volume, x, y);
+    },
+    'option2': (x, y) => {
+      const buffer = chromBuffers[x];
+      const volume = decibelToLinear(global.get('volume'));
+      console.log("volume", volume);
+      triggerSoundFile2(audioContext, gridLength, buffer, volume, x, y);
+    },
+    'whole-tone scale': (x, y) => {
+      const buffer = mode1Buffers[x];
+      const volume = decibelToLinear(global.get('volume'));
+      console.log("volume", volume);
+      triggerSoundFileMode1(audioContext, gridLength, buffer, volume, x, y);
+    },
+    'octatonic scale': (x, y) => {
+      const buffer = mode2Buffers[x];
+      const volume = decibelToLinear(global.get('volume'));
+      console.log("volume", volume);
+      triggerSoundFileMode2(audioContext, gridLength, buffer, volume, x, y);
+    },
+    'birds': (x, y) => {
+      const buffer = birdsBuffer;
+      const volume = decibelToLinear(global.get('volume'));
+      console.log("volume", volume);
+      triggerSoundFileGranular(audioContext, gridLength, buffer, volume, x, y);
+    },
+  }
+
+  // audio engine
+  const processor = (schedulerTime, audioTime) => {
+    const sonification = global.get('sonificationMode');
+    const grid = global.get('grid');
+    const now = sync.getSyncTime();
+
+    if (schedulerTime > now) {
+      if (grid[y][x] === 1) {
+        sonificationStrategies[sonification](x, y);
+        // $container.style.backgroundColor = 'purple'; // ajouter le code pour faire jouer des LEDs du R-Pi
+        // setTimeout(() => {
+        //   $container.style.backgroundColor = 'black';
+        // }, 50)
+      }
+    }
+
+    console.log('pouet');
+    return schedulerTime + global.get('delay') / 1000;
+  };
+
+// fonction pour mettre à jour
+  global.onUpdate(updates => {
+    for (let key in updates) {
+      const value = updates[key];
+
+      switch (key) {
+        case 'isPlaying': {
+          if (value === true) {
+            const startTime = global.get('startTime');
+            scheduler.add(processor, startTime);
+          } else if (scheduler.has(processor)) {
+            scheduler.remove(processor);
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    }
+  }, true);
+}
 // The launcher allows to fork multiple clients in the same terminal window
 // by defining the `EMULATE` env process variable
 // e.g. `EMULATE=10 npm run watch thing` to run 10 clients side-by-side

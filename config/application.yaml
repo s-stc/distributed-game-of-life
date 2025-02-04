@@ -2,9 +2,9 @@ name: distributed game of life
 author: ""
 clients:
   cell:
-    target: browser
+    runtime: browser
     default: true
   controller:
-    target: browser
+    runtime: browser
   node_cell:
-    target: node
+    runtime: node

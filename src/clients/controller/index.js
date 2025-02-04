@@ -12,9 +12,6 @@ import '@ircam/sc-components/sc-radio.js';
 import '@ircam/sc-components/sc-slider.js';
 import '@ircam/sc-components/sc-transport.js';
 
-
-import '../components/sw-audit.js';
-
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
 // - Issue Tracker:         https://github.com/collective-soundworks/soundworks/issues
@@ -53,12 +50,12 @@ async function main($container) {
               global.set({
                   grid : e.detail.value,
               });
-              console.log(e.detail.value);
+              // console.log(e.detail.value);
             }}
           ></sc-matrix>
 
           <div>
-              <sc-button
+              <!-- <sc-button
                 class="test-button"
                 selected=true
                 @input =${async (e) => {
@@ -73,15 +70,16 @@ async function main($container) {
                   await global.set({ isPlaying : false });
                   console.log(global.get('isPlaying'))
                 }}
-              >Stop</sc-button>
+              >Stop</sc-button> -->
 
-              <!-- <sc-transport
+              <sc-transport
                 value=${global.get('isPlaying')}
                 .buttons=${["play", "stop"]}
-                @input=${async function (e) {
-                  await global.set({isPlaying : e.detail.value})
+                @change=${async function (e) {
+                  await global.set({isPlaying : e.detail.value});
+                  console.log(global.get('isPlaying'));
                 }}
-              ></sc-transport> -->
+              ></sc-transport>
 
               <sc-button
                   class="test-button"

@@ -43,15 +43,16 @@ export default {
         default: false,
     },
 
-    isPlaying: {
-        type: 'boolean',
-        default: false,
-    },
-
-    // isPlaying: {
-    //   type: 'any',
-    //   default: 'stop',
+    // isPlaying: { // pour les boutons start / stop
+    //     type: 'boolean',
+    //     default: false,
     // },
+
+    isPlaying: { // pour le bouton sc-transport
+      type: 'string',
+      default: null,
+      nullable: true,
+    },
 
     sonificationMode:{
         type:'enum',

@@ -1,6 +1,6 @@
 import '@soundworks/helpers/polyfills.js';
 import { Server } from '@soundworks/core/server.js';
-import { loadConfig } from '@soundworks/helpers/node.js';
+import { loadConfig, configureHttpRouter } from '@soundworks/helpers/server.js';
 
 import pluginPlatformInit from '@soundworks/plugin-platform-init/server.js';
 import pluginSync from '@soundworks/plugin-sync/server.js';
@@ -15,7 +15,7 @@ import { countNeighbors, countModuloNeighbors} from '../lib/numNeighbors.js';
 import updateCell from '../lib/updateCell.js';
 import * as patterns from '../lib/patterns.js';
 
-import '../utils/catch-unhandled-errors.js';
+// import '../utils/catch-unhandled-errors.js';
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -36,7 +36,7 @@ console.log(`
  */
 const server = new Server(config);
 // configure the server for usage within this application template
-server.useDefaultApplicationTemplate();
+configureHttpRouter(server);
 
 /**
  * Register plugins and schemas
@@ -54,8 +54,8 @@ server.pluginManager.register('checkin', pluginCheckin, {
     data: generateCoordinates(GRID_LENGTH),
 });
 
-server.stateManager.registerSchema('global', globalSchema);
-server.stateManager.registerSchema('cell', cellSchema);
+server.stateManager.defineClass('global', globalSchema);
+server.stateManager.defineClass('cell', cellSchema);
 
 /**
  * Launch application (init plugins, http server, etc.)
@@ -107,7 +107,8 @@ function updateGrid() {  // fonction pour mettre à jour l'état de la grille
 function gameLoop() {
   const isPlaying = global.get('isPlaying');
   const delay = global.get('delay');
-  if (isPlaying === true) {
+  if (isPlaying === 'play') {
+  // if (isPlaying === true) {
       updateGrid();
       setTimeout(gameLoop, delay);
   }
@@ -158,7 +159,8 @@ global.onUpdate(updates => {
         break;
       }
       case 'isPlaying': {
-        if (value === true){
+        if (value === 'play'){
+        // if (value === true){
           gameLoop();
         }
         break;

@@ -2,7 +2,6 @@ import '@soundworks/helpers/polyfills.js';
 import { Client } from '@soundworks/core/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
-// import { AudioContext } from 'node-web-audio-api';
 
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
@@ -13,7 +12,6 @@ import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js';
 import pluginSync from '@soundworks/plugin-sync/client.js';
 import pluginCheckin from '@soundworks/plugin-checkin/client.js';
 
-import '../components/sw-credits.js';
 import '@ircam/sc-components/sc-text.js';
 import '@ircam/sc-components/sc-number.js';
 
@@ -120,9 +118,6 @@ async function main($container) {
   const {x, y} = await checkin.getData(); // version avec le plugin Checkin
   console.log(x,y);
 
-  let isPlaying = global.get('isPlaying');
-  const sonificationMode = global.get('sonificationMode');
-
 
   // sonification
   const sonificationStrategies = {
@@ -184,7 +179,8 @@ async function main($container) {
 
       switch (key) {
         case 'isPlaying': {
-          if (value === true) {
+          if (value === 'play') {
+          // if (value === true) {
             const startTime = global.get('startTime');
             scheduler.add(processor, startTime);
           } else if (scheduler.has(processor)) {
@@ -203,13 +199,18 @@ async function main($container) {
       <div class="simple-layout">
         <p>Hello ${client.config.app.name}!</p>
         <div>
-          <sc-text>x:</sc-text>
+          <sc-text
+            class="test-text"
+          >x:</sc-text>
           <sc-number
-          value=${x}
+            value=${x}
           ></sc-number>
-          <sc-text>y:</sc-text>
+
+          <sc-text
+            class="test-text"
+          >y:</sc-text>
           <sc-number
-          value=${y}
+            value=${y}
           ></sc-number>
         </div>
         <sw-credits .infos="${client.config.app}"></sw-credits>
