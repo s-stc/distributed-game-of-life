@@ -94,53 +94,35 @@ async function main($container) {
 
   // téléchargement des fichiers sons
   const loader = new AudioBufferLoader(audioContext); // permet que ça marche aussi pour les clients node
-
-  const chromBuffers = []; // pizz
-  const mode1Buffers = []; // clarinette
-  const mode2Buffers = [];
+  const chromBuffer = await loader.load(`audio/sample${y}${x}.wav`);
+  const mode1Buffer = await loader.load(`audio/mode1sample${x}.wav`);
+  const mode2Buffer = await loader.load(`audio/mode2sample${x}.wav`);
   const birdsBuffer = await loader.load(`audio/birds.wav`);
   const modalBuffer = await loader.load(`audio/modalsample${y}${x}.wav`);
-
-  for (let i = 1; i <= 10; i++) {
-    const buffer = await loader.load(`audio/sample${i}.wav`);
-    chromBuffers.push(buffer);
-  }
-
-  for (let j = 0; j <= 10; j++) {
-    const buffer = await loader.load(`audio/mode1sample${j}.wav`);
-    mode1Buffers.push(buffer);
-  }
-
-  for (let j = 0; j <= 10; j++) {
-    const buffer = await loader.load(`audio/mode2sample${j}.wav`);
-    mode2Buffers.push(buffer);
-  }
-
-
 
   // sonification
   const sonificationStrategies = {
     'mute': () => {},
     'chromatic scale': (x, y) => {
-        const buffer = chromBuffers[x];
+        const buffer = chromBuffer;
         const volume = decibelToLinear(global.get('volume'));
         console.log("volume", volume);
         triggerSoundFile(audioContext, gridLength, buffer, volume, x, y);
     },
     'option2': (x, y) => {
-        const buffer = chromBuffers[x];
+        const buffer = chromBuffer;
         const volume = decibelToLinear(global.get('volume'));
         console.log("volume", volume);
         triggerSoundFile2(audioContext, gridLength, buffer, volume, x, y);
     },
     'whole-tone scale': (x, y) => {
-        const buffer = mode1Buffers[x];
+        const buffer = mode1Buffer;
         const volume = decibelToLinear(global.get('volume'));
         console.log("volume", volume);
         triggerSoundFileMode1(audioContext, gridLength, buffer, volume, x, y);
     },
     'octatonic scale': (x, y) => {
-        const buffer = mode2Buffers[x];
+        const buffer = mode2Buffer;
         const volume = decibelToLinear(global.get('volume'));
         console.log("volume", volume);
         triggerSoundFileMode2(audioContext, gridLength, buffer, volume, x, y);
