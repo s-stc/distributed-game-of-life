@@ -3,15 +3,14 @@ import { Client } from '@soundworks/core/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
 
-import { AudioBufferLoader } from '@ircam/sc-loader';
-import { Scheduler } from '@ircam/sc-scheduling';
-import { decibelToLinear } from '@ircam/sc-utils';
-import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular, triggerSoundFileModal } from '../../lib/sonificationModes.js';
-import { generateCoordinates } from '../../lib/hostnameToCoordinates.js';
-
 import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js';
 import pluginSync from '@soundworks/plugin-sync/client.js';
 import pluginCheckin from '@soundworks/plugin-checkin/client.js';
+
+import { AudioBufferLoader } from '@ircam/sc-loader';
+import { Scheduler } from '@ircam/sc-scheduling';
+import { generateCoordinates } from '../../lib/hostnameToCoordinates.js';
+import sonificationStrategies from '../../lib/sonificationStrategies.js';
 
 import '@ircam/sc-components/sc-text.js';
 import '@ircam/sc-components/sc-number.js';
@@ -22,55 +21,20 @@ import '@ircam/sc-components/sc-number.js';
 // - Issue Tracker:         https://github.com/collective-soundworks/soundworks/issues
 // - Wizard & Tools:        `npx soundworks`
 
-/**
- * If multiple clients are emulated you might to want to share some resources
- */
-// const audioContext = new AudioContext();
-
 const audioContext = new AudioContext();
 
 async function main($container) {
-  /**
-   * Load configuration from config files and create the soundworks client
-   */
   const config = loadConfig();
   const client = new Client(config);
 
-  /**
-   * Register some soundworks plugins, you will need to install the plugins
-   * before hand (run `npx soundworks` for help)
-   */
-  // client.pluginManager.register('my-plugin', plugin);
   client.pluginManager.register('platform-init', pluginPlatformInit, { audioContext });
   client.pluginManager.register('checkin', pluginCheckin);
   client.pluginManager.register('sync', pluginSync, {
     getTimefunction: () => audioContext.currentTime,
   });
 
-  /**
-   * Register the soundworks client into the launcher
-   *
-   * The launcher will do a bunch of stuff for you:
-   * - Display default initialization screens. If you want to change the provided
-   * initialization screens, you can import all the helpers directly in your
-   * application by doing `npx soundworks --eject-helpers`. You can also
-   * customise some global syles variables (background-color, text color etc.)
-   * in `src/clients/components/css/app.scss`.
-   * You can also change the default language of the intialization screen by
-   * setting, the `launcher.language` property, e.g.:
-   * `launcher.language = 'fr'`
-   * - By default the launcher automatically reloads the client when the socket
-   * closes or when the page is hidden. Such behavior can be quite important in
-   * performance situation where you don't want some phone getting stuck making
-   * noise without having any way left to stop it... Also be aware that a page
-   * in a background tab will have all its timers (setTimeout, etc.) put in very
-   * low priority, messing any scheduled events.
-   */
   launcher.register(client, { initScreensContainer: $container });
 
-  /**
-   * Launch application
-   */
   await client.start();
 
   // initialisation
@@ -94,51 +58,13 @@ async function main($container) {
 
   // téléchargement des fichiers sons
   const loader = new AudioBufferLoader(audioContext); // permet que ça marche aussi pour les clients node
-  const chromBuffer = await loader.load(`audio/sample${y}${x}.wav`);
-  const mode1Buffer = await loader.load(`audio/mode1sample${x}.wav`);
-  const mode2Buffer = await loader.load(`audio/mode2sample${x}.wav`);
-  const birdsBuffer = await loader.load(`audio/birds.wav`);
-  const modalBuffer = await loader.load(`audio/modalsample${y}${x}.wav`);
-
-  // sonification
-  const sonificationStrategies = {
-    'mute': () => {},
-    'chromatic scale': (x, y) => {
-        const buffer = chromBuffer;
-        const volume = decibelToLinear(global.get('volume'));
-        console.log("volume", volume);
-        triggerSoundFile(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'option2': (x, y) => {
-        const buffer = chromBuffer;
-        const volume = decibelToLinear(global.get('volume'));
-        console.log("volume", volume);
-        triggerSoundFile2(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'whole-tone scale': (x, y) => {
-        const buffer = mode1Buffer;
-        const volume = decibelToLinear(global.get('volume'));
-        console.log("volume", volume);
-        triggerSoundFileMode1(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'octatonic scale': (x, y) => {
-        const buffer = mode2Buffer;
-        const volume = decibelToLinear(global.get('volume'));
-        console.log("volume", volume);
-        triggerSoundFileMode2(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'modal scale' : (x, y) => {
-      const buffer = modalBuffer;
-      const volume = decibelToLinear(global.get('volume'));
-      triggerSoundFileModal(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'birds': (x, y) => {
-        const buffer = birdsBuffer;
-        const volume = decibelToLinear(global.get('volume'));
-        console.log("volume", volume);
-        triggerSoundFileGranular(audioContext, gridLength, buffer, volume, x, y);
-    },
-  }
+  const buffers = {
+    chromBuffer: await loader.load(`audio/sample${y}${x}.wav`),
+    mode1Buffer: await loader.load(`audio/mode1sample${x}.wav`),
+    mode2Buffer: await loader.load(`audio/mode2sample${x}.wav`),
+    birdsBuffer: await loader.load(`audio/birds.wav`),
+    modalBuffer: await loader.load(`audio/modalsample${y}${x}.wav`),
+  };
 
   const processor = (schedulerTime, audioTime) => {
     const sonification = global.get('sonificationMode');
@@ -147,7 +73,8 @@ async function main($container) {
 
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
-        sonificationStrategies[sonification](x, y);
+        console.log('pouet');
+        sonificationStrategies[sonification](audioContext, global, buffers, x, y);
         $container.style.backgroundColor = 'purple';
         setTimeout(() => {
           $container.style.backgroundColor = 'black';
@@ -155,7 +82,6 @@ async function main($container) {
       }
     }
 
-    console.log('pouet');
     return schedulerTime + global.get('delay') / 1000;
   };
 

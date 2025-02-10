@@ -9,10 +9,8 @@ import pluginCheckin from '@soundworks/plugin-checkin/client.js';
 
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
-import { decibelToLinear } from '@ircam/sc-utils';
-import { triggerSoundFile, triggerSoundFile2, triggerSoundFileMode1, triggerSoundFileMode2, triggerSoundFileGranular, triggerSoundFileModal } from '../../lib/sonificationModes.js';
 import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/hostnameToCoordinates.js';
-
+import sonificationStrategies from '../../lib/sonificationStrategies.js';
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -54,8 +52,6 @@ async function bootstrap() {
 
   console.log(`Hello ${client.config.app.name}!`);
 
-
-
   // initialisation
   const global = await client.stateManager.attach('global');
   const checkin = await client.pluginManager.get('checkin');
@@ -85,53 +81,13 @@ async function bootstrap() {
 
   // loading audio files
   const loader = new AudioBufferLoader(audioContext);
-
-  const chromBuffer = await loader.load(`public/audio/sample${y}${x}.wav`);
-  const mode1Buffer = await loader.load(`public/audio/mode1sample${x}.wav`);
-  const mode2Buffer = await loader.load(`public/audio/mode2sample${x}.wav`);
-  const birdsBuffer = await loader.load(`public/audio/birds.wav`);
-  const modalBuffer = await loader.load(`public/audio/modalsample${y}${x}.wav`);
-
-  // sonification
-  const sonificationStrategies = {
-    'mute': () => {},
-    'chromatic scale': (x, y) => {
-      const buffer = chromBuffer;
-      const volume = decibelToLinear(global.get('volume'));
-      console.log("volume", volume);
-      triggerSoundFile(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'option2': (x, y) => {
-      const buffer = chromBuffer;
-      const volume = decibelToLinear(global.get('volume'));
-      console.log("volume", volume);
-      triggerSoundFile2(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'whole-tone scale': (x, y) => {
-      const buffer = mode1Buffer;
-      const volume = decibelToLinear(global.get('volume'));
-      console.log("volume", volume);
-      triggerSoundFileMode1(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'octatonic scale': (x, y) => {
-      const buffer = mode2Buffer;
-      const volume = decibelToLinear(global.get('volume'));
-      console.log("volume", volume);
-      triggerSoundFileMode2(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'modal scale': (x, y) => {
-      const buffer = modalBuffer;
-      const volume = decibelToLinear(global.get('volume'));
-      console.log("volume", volume);
-      triggerSoundFileModal(audioContext, gridLength, buffer, volume, x, y);
-    },
-    'birds': (x, y) => {
-      const buffer = birdsBuffer;
-      const volume = decibelToLinear(global.get('volume'));
-      console.log("volume", volume);
-      triggerSoundFileGranular(audioContext, gridLength, buffer, volume, x, y);
-    },
-  }
+  const buffers = {
+    chromBuffer: await loader.load(`public/audio/sample${y}${x}.wav`),
+    mode1Buffer: await loader.load(`public/audio/mode1sample${x}.wav`),
+    mode2Buffer: await loader.load(`public/audio/mode2sample${x}.wav`),
+    birdsBuffer: await loader.load(`public/audio/birds.wav`),
+    modalBuf,er: await loader.load(`public/audio/modalsample${y}${x}.wav`),
+  };
 
   const processor = (schedulerTime, audioTime) => {
     const sonification = global.get('sonificationMode');
@@ -140,7 +96,7 @@ async function bootstrap() {
 
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
-        sonificationStrategies[sonification](x, y);
+        sonificationStrategies[sonification](audioContext, global, buffers, x, y);
         // $container.style.backgroundColor = 'purple'; // ajouter le code pour faire jouer des LEDs du R-Pi
         // setTimeout(() => {
         //   $container.style.backgroundColor = 'black';

@@ -7,13 +7,12 @@ import pluginSync from '@soundworks/plugin-sync/server.js';
 import pluginCheckin from '@soundworks/plugin-checkin/server.js';
 
 import globalSchema from './schemas/global.js';
-import cellSchema from './schemas/cell.js';
 
-import { generateCoordinates, generateHostnamesToCoordinates } from '../lib/hostnameToCoordinates.js';
 import { createBlankGrid, createRandomGrid, applyPattern} from '../lib/createGrid.js';
 import { countNeighbors, countModuloNeighbors} from '../lib/numNeighbors.js';
 import updateCell from '../lib/updateCell.js';
 import * as patterns from '../lib/patterns.js';
+import { sonificationStrategiesNames } from '../lib/sonificationStrategies.js';
 
 // import '../utils/catch-unhandled-errors.js';
 
@@ -51,11 +50,12 @@ server.pluginManager.register('sync', pluginSync);
 
 server.pluginManager.register('checkin', pluginCheckin, {
     capacity: GRID_LENGTH * GRID_LENGTH,
-    // data: generateCoordinates(GRID_LENGTH),
 });
 
+console.log(sonificationStrategiesNames);
+globalSchema.sonificationMode.list = sonificationStrategiesNames;
+
 server.stateManager.defineClass('global', globalSchema);
-server.stateManager.defineClass('cell', cellSchema);
 
 /**
  * Launch application (init plugins, http server, etc.)
@@ -67,8 +67,6 @@ const global = await server.stateManager.create('global', {
   gridLength: GRID_LENGTH,
 });
 console.log(global.getValues());
-
-const cells = await server.stateManager.getCollection('cell');
 
 // and do your own stuff!
 
@@ -189,5 +187,3 @@ global.onUpdate(updates => {
 
 // cells.onDetach(() => dostuff()); // when a state is deleted --> give coordinates + neighbors
 // cells.onUpdate(() => dostuff()); // when a state is updated --> give neighbors
-
-// comment faire quand des nodes et des clients browser se connectent, pour ne pas qu'ils aient deux fois le mm {x, y}
