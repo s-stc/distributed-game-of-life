@@ -33,6 +33,11 @@ export default {
       default: 200,
     },
 
+    synchronicity: {
+      type: 'boolean',
+      default: true,
+    },
+
     startTime: {
       type: 'float',
       default: 0,
@@ -58,8 +63,24 @@ export default {
     volume: { // volume in dB [-60, 6]
       type: 'float',
       min: -60,
-      max: 6,
+      max: 12,
       default: 0,
     },
+
+    filterMode:{
+      type: 'boolean',
+      default: false,
+    },
+
+    reverb:{
+      type:'float',
+      min: 0,
+      max: 1,
+      default: 0,
+    },
+
+    // IR:{
+    //   type: 'any',
+    // }
 
 }

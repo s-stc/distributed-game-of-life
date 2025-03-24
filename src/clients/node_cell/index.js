@@ -7,9 +7,9 @@ import { AudioContext } from 'node-web-audio-api';
 import pluginSync from '@soundworks/plugin-sync/client.js';
 import pluginCheckin from '@soundworks/plugin-checkin/client.js';
 
+import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/hostnameToCoordinates.js';
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
-import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/hostnameToCoordinates.js';
 import sonificationStrategies from '../../lib/sonificationStrategies.js';
 
 // - General documentation: https://soundworks.dev/
@@ -18,9 +18,7 @@ import sonificationStrategies from '../../lib/sonificationStrategies.js';
 // - Wizard & Tools:        `npx soundworks`
 
 async function bootstrap() {
-  /**
-   * Load configuration from config files and create the soundworks client
-   */
+
   const config = loadConfig(process.env.ENV, import.meta.url);
   const client = new Client(config);
 
@@ -37,17 +35,9 @@ async function bootstrap() {
     getTimefunction: () => audioContext.currentTime,
   });
 
-  /**
-   * Register the soundworks client into the launcher
-   *
-   * Automatically restarts the process when the socket closes or when an
-   * uncaught error occurs in the program.
-   */
+
   launcher.register(client);
 
-  /**
-   * Launch application
-   */
   await client.start();
 
   console.log(`Hello ${client.config.app.name}!`);
@@ -86,8 +76,11 @@ async function bootstrap() {
     mode1Buffer: await loader.load(`public/audio/mode1sample${x}.wav`),
     mode2Buffer: await loader.load(`public/audio/mode2sample${x}.wav`),
     birdsBuffer: await loader.load(`public/audio/birds.wav`),
-    modalBuf,er: await loader.load(`public/audio/modalsample${y}${x}.wav`),
+    modalBuffer: await loader.load(`public/audio/modalsample${y}${x}.wav`),
   };
+  const IR = {
+    veryLargeAmbience: await loader.load(`public/audio/IR_VeryLargeAmbience.wav`)
+  }
 
   const processor = (schedulerTime, audioTime) => {
     const sonification = global.get('sonificationMode');
@@ -96,7 +89,8 @@ async function bootstrap() {
 
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
-        sonificationStrategies[sonification](audioContext, global, buffers, x, y);
+        console.log('pouet');
+        sonificationStrategies[sonification](audioContext, global, buffers, IR, x, y);
         // $container.style.backgroundColor = 'purple'; // ajouter le code pour faire jouer des LEDs du R-Pi
         // setTimeout(() => {
         //   $container.style.backgroundColor = 'black';
@@ -106,7 +100,6 @@ async function bootstrap() {
 
     return schedulerTime + global.get('delay') / 1000;
   };
-
 
   global.onUpdate(updates => {
     for (let key in updates) {

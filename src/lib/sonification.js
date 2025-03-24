@@ -1,18 +1,13 @@
 export class TriggerBuffer {
-  constructor(audioContext, buffer, volume, gridLength, x, y, detuneValue){
+  constructor(audioContext, buffer, gridLength, x, y, detuneValue){
     this.audioContext = audioContext;
     this.buffer = buffer;
-    this.volume = volume;
     this.gridLength = gridLength;
     this.x = x;
     this.y = y;
     this.detuneValue = detuneValue;
 
-    this.output = audioContext.createGain();
-    this.output.gain.value = this.volume;
-
     this.panner = audioContext.createStereoPanner();
-    this.panner.connect(this.output);
     this.panner.pan.value = 2 * this.x / (this.gridLength - 1) - 1;
 
     this.connect = this.connect.bind(this);
@@ -20,10 +15,10 @@ export class TriggerBuffer {
   }
 
   connect(dest) {
-    this.output.connect(dest);
+    this.panner.connect(dest);
   }
 
-  trigger() {
+  trigger(time) {
     const now = this.audioContext.currentTime;
 
     const env =  this.audioContext.createGain();
@@ -36,27 +31,26 @@ export class TriggerBuffer {
     src.buffer = this.buffer;
     src.detune.value = this.y * this.detuneValue;
     src.connect(env);
-    src.start(now);
-    src.stop(now + 1.5);
+    src.start(now + time);
+    src.stop(now + time + 1.5);
   }
 }
 
 export class TriggerBufferGranular {
-  constructor(audioContext, buffer, volume, gridLength, x, y, detuneValue, period){
+  constructor(audioContext, buffer, gridLength, x, y, detuneValue, period){
     this.audioContext = audioContext;
     this.buffer = buffer;
-    this.volume = volume;
     this.gridLength = gridLength;
     this.x = x;
     this.y = y;
     this.detuneValue = detuneValue;
     this.duration = period * 2; // bouton pour choisir la durée des grains?
 
-    this.output = audioContext.createGain();
-    this.output.gain.value = this.volume;
+    // this.output = audioContext.createGain();
+    // this.output.gain.value = this.volume;
 
     this.panner = audioContext.createStereoPanner();
-    this.panner.connect(this.output);
+    // this.panner.connect(this.output);
     this.panner.pan.value = 2 * this.x / (this.gridLength - 1) - 1;
 
     this.connect = this.connect.bind(this);
@@ -64,7 +58,7 @@ export class TriggerBufferGranular {
   }
 
   connect(dest) {
-    this.output.connect(dest);
+    this.panner.connect(dest);
   }
 
   trigger() {
@@ -82,24 +76,19 @@ export class TriggerBufferGranular {
     src.buffer = this.buffer;
     src.detune.value = this.y * this.detuneValue;
     src.connect(env);
-    src.start(grainTime, this.x);
+    src.start(grainTime, this.x + 1);
     src.stop(grainTime + 0.5);
   }
 }
 
 export class TriggerOsc {
-  constructor(audioContext, volume, gridLength, x, y){
+  constructor(audioContext, gridLength, x, y){
     this.audioContext = audioContext;
-    this.volume = volume;
     this.gridLength = gridLength;
     this.x = x;
     this.y = y;
 
-    this.output = audioContext.createGain();
-    this.output.gain.value = this.volume;
-
-    this.panner = audioContext.createStereoPanner();
-    this.panner.connect(this.output);
+    this.panner = this.audioContext.createStereoPanner();
     this.panner.pan.value = 2 * this.x / (this.gridLength - 1) - 1;
 
     this.connect = this.connect.bind(this);
@@ -107,11 +96,11 @@ export class TriggerOsc {
   }
 
   connect(dest) {
-    this.output.connect(dest);
+    this.panner.connect(dest);
   }
 
-  trigger() {
-    const now = this.audioContext.currentTime;
+  trigger(randomTime) {
+    const now = this.audioContext.currentTime + randomTime;
 
     const env =  this.audioContext.createGain();
     env.connect(this.panner);
@@ -121,9 +110,100 @@ export class TriggerOsc {
 
     const osc = this.audioContext.createOscillator();
     // osc.frequency.value = 200;
-    osc.frequency.value = 100 + (1200 * this.y) + (100 * this.x);
+    osc.frequency.value = 300 + (1200 * this.y) + (100 * this.x);
     osc.connect(env);
     osc.start(now);
     osc.stop(now + 0.5);
+  }
+}
+
+// export class MasterVolume {            // pas très utile pour le moment
+//   constructor(audioContext, volume){
+//     this.audioContext = audioContext;
+//     this.volume = volume;
+//     this.output = this.audioContext.createGain();
+//     this.output.gain.value = this.volume;
+
+//     this.connect = this.connect.bind(this);
+//   }
+//   connect(dest){
+//     this.output.connect(dest);
+//   }
+// }
+
+export class Filter {
+  constructor(audioContext, gridLength, x, y){
+    this.audioContext = audioContext;
+    this.gridLength = gridLength;
+    this.x = x;
+    this.y = y;
+    this.filter = this.audioContext.createBiquadFilter();
+    this.filter.type = "bandpass"; // "highpass" "lowpass" "lowshelf" "highshelf" "peaking" "notch"
+    this.filter.Q.value = 1.4 ; // utilisé avec lowpass, highpass, bandpass, peak, notch ; en théorie entre 0 et l'infini; entre 0.2 et 18 on va dire
+    // this.filter.gain.value = ; // utilisé avec lowshelf, highself
+    this.filter.frequency.value = (50 * Math.pow(10, y / 2)) ;
+  }
+
+  connect(dest) {
+    this.filter.connect(dest);
+  }
+
+}
+
+export class Distorsion {
+  constructor(audioContext, gridLength, x, y){
+    this.audioContext = audioContext;
+    this.gridLength = gridLength;
+    this.x = x;
+    this.y = y;
+    this.distorsion = this.audioContext.createWaveShaper();
+    // this.distorsion.curve = ; // Float32Array pour spécifier comment le signal doit être distordu
+  }
+
+  connect(dest) {
+    this.distorsion.connect(dest);
+  }
+}
+
+export class Reverb {
+  constructor(audioContext, impulseResponse, gridLength, x, y){
+    this.audioContext = audioContext;
+    this.gridLength = gridLength;
+    this.x = x;
+    this.y = y;
+    this.input = this.audioContext.createGain();
+    this.output = this.audioContext.createGain();
+    this.dry = this.audioContext.createGain();
+    this.wet = this.audioContext.createGain();
+    this.convReverb = this.audioContext.createConvolver();
+    this.IR = impulseResponse; // réponse impulsionnelle à partir de laquelle est calculée la réverb à convolution
+    this.convReverb.buffer = this.IR;
+
+    this.dryGain = (this.gridLength - 1 - this.y) / (this.gridLength - 1);
+    this.wetGain = this.y / (this.gridLength - 1);
+    console.log(this.dryGain, this.wetGain);
+    this.dry.gain.value = this.dryGain;
+    this.wet.gain.value = this.wetGain;
+
+    this.input.connect(this.dry);
+    this.input.connect(this.wet);
+    this.wet.connect(this.convReverb);
+
+    this.convReverb.connect(this.output);
+    this.dry.connect(this.output);
+
+    this.connect = this.connect.bind(this);
+  }
+
+  connect(dest) {
+    this.output.connect(dest);
+  }
+
+}
+
+export class Delay {
+  constructor(audioContext){
+    this.audioContext = audioContext;
+    this.delay = this.audioContext.createDelay(); // préciser delayTime dans les parenthèses, par défaut, 1 seconde? ou 0 seconde?
   }
 }

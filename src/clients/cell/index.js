@@ -11,6 +11,8 @@ import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import { generateCoordinates } from '../../lib/hostnameToCoordinates.js';
 import sonificationStrategies from '../../lib/sonificationStrategies.js';
+import { Reverb, Filter } from '../../lib/sonification.js';
+import { decibelToLinear } from '@ircam/sc-utils';
 
 import '@ircam/sc-components/sc-text.js';
 import '@ircam/sc-components/sc-number.js';
@@ -65,8 +67,31 @@ async function main($container) {
     birdsBuffer: await loader.load(`audio/birds.wav`),
     modalBuffer: await loader.load(`audio/modalsample${y}${x}.wav`),
   };
+  const IR = {
+    veryLargeAmbience: await loader.load(`audio/IR_VeryLargeAmbience.wav`)
+  }
 
-  const processor = (schedulerTime, audioTime) => {
+  // paramètres sonores génériques
+  const masterVolume = audioContext.createGain();
+  const volume = decibelToLinear(global.get('volume'));
+  masterVolume.gain.value = volume;
+  masterVolume.connect(audioContext.destination);
+
+  const reverbVolume = global.get('reverb');
+  const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
+  reverb.output.gain.value = reverbVolume;
+  reverb.connect(masterVolume);
+
+  const noverb = audioContext.createGain();
+  const noverbVolume = 1 - reverbVolume;
+  noverb.gain.value = noverbVolume;
+  noverb.connect(masterVolume);
+
+  const filter = new Filter(audioContext, gridLength, x, y);
+
+
+
+  const processor = (schedulerTime, audioTime) => { // pourquoi audioTime ?
     const sonification = global.get('sonificationMode');
     const grid = global.get('grid');
     const now = sync.getSyncTime();
@@ -74,15 +99,16 @@ async function main($container) {
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
         console.log('pouet');
-        sonificationStrategies[sonification](audioContext, global, buffers, x, y);
+        sonificationStrategies[sonification](audioContext, global, buffers, filter, noverb, reverb, x, y);
         $container.style.backgroundColor = 'purple';
         setTimeout(() => {
           $container.style.backgroundColor = 'black';
         }, 50)
       }
     }
+    return schedulerTime + global.get('delay') / 1000; // why return = ask to be call back?
 
-    return schedulerTime + global.get('delay') / 1000;
+
   };
 
   global.onUpdate(updates => {
@@ -97,6 +123,18 @@ async function main($container) {
           } else if (scheduler.has(processor)) {
             scheduler.remove(processor);
           }
+          break;
+        }
+        case 'volume': {
+          const newVolume = decibelToLinear(value);
+          const now = audioContext.currentTime;
+          masterVolume.gain.setTargetAtTime(newVolume, now, 0.01); // probleme ça clique
+          break;
+        }
+        case 'reverb': {
+          const now = audioContext.currentTime;
+            reverb.output.gain.setTargetAtTime(value, now, 0.01);
+            noverb.gain.setTargetAtTime(1 - value, now, 0.01);
           break;
         }
         default:

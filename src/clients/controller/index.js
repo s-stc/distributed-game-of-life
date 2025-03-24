@@ -11,6 +11,7 @@ import '@ircam/sc-components/sc-select.js';
 import '@ircam/sc-components/sc-radio.js';
 import '@ircam/sc-components/sc-slider.js';
 import '@ircam/sc-components/sc-transport.js';
+import '@ircam/sc-components/sc-toggle.js';
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -74,36 +75,67 @@ async function main($container) {
           </div>
 
           <div>
-                <sc-text
-                  class='test-text'
-                >Pattern</sc-text>
+              <sc-text
+                class='test-text'
+              >Pattern</sc-text>
 
-                <sc-select
-                  .options=${global.get('patternNames')}
-                  class='test-select'
-                  placeholder="select a pattern"
-                  @change=${ async function (e) {
-                    if (e.detail.value) {
-                      await global.set({ pattern: e.detail.value });
-                    }
+              <sc-select
+                .options=${global.get('patternNames')}
+                class='test-select'
+                placeholder="select a pattern"
+                @change=${ async function (e) {
+                  if (e.detail.value) {
+                    await global.set({ pattern: e.detail.value });
+                  }
+                  renderApp();
+                }}
+              ></sc-select>
+          </div>
+
+          <div>
+              <sc-text
+                class='test-text'
+              >Sonification Mode</sc-text>
+
+              <sc-select
+                .options=${global.getDescription('sonificationMode').list}
+                class='test-select'
+                value=${global.get('sonificationMode')}
+                @change=${async function (e) {
+                    await global.set({sonificationMode : e.detail.value});
+                    console.log(global.get('sonificationMode'));
                     renderApp();
-                  }}
-                ></sc-select>
+                }}
+              ></sc-select>
 
-                <sc-text
-                  class='test-text'
-                >Sonification Mode</sc-text>
+              <sc-text
+                class='test-text'
+              >Reverberation</sc-text>
 
-                <sc-select
-                  .options=${global.getDescription('sonificationMode').list}
-                  class='test-select'
-                  value=${global.get('sonificationMode')}
-                  @change=${async function (e) {
-                      await global.set({sonificationMode : e.detail.value});
-                      console.log(global.get('sonificationMode'));
-                      renderApp();
-                  }}
-                ></sc-select>
+              <sc-slider
+                value=${global.get('reverb')}
+                min=0
+                max=1
+                step=0.01
+                @input=${async function (e) {
+                  await global.set({reverb: e.detail.value});
+                  console.log('reverb:', global.get('reverb'));
+                  renderApp();
+                }}
+              ></sc-slider>
+
+              <sc-text
+                class='test-text'
+              >Filter</sc-text>
+
+              <sc-toggle
+                ?active=${global.get('filterMode')}
+                @change=${async function (e) {
+                  await global.set({filterMode: e.detail.value});
+                  console.log('filterMode:', global.get('filterMode'));
+                  renderApp();
+                }}
+              ></sc-toggle>
           </div>
 
           <div>
@@ -137,6 +169,29 @@ async function main($container) {
                   console.log('Delay in ms:', global.get('delay'));
               }}
             ></sc-number>
+            <sc-text
+              class="test-text"
+            >Synchronicity</sc-text>
+            <sc-radio
+              options="${JSON.stringify(['yes', 'no'])}"
+              class='test-radio'
+              value="yes"
+              @change=${async (e) => {
+                const randomMode = e.detail.value;
+                switch (randomMode) {
+                    case 'yes':
+                        await global.set({synchronicity : true});
+                        console.log('synchronicity:', global.get('synchronicity'));
+                        break;
+                    case 'no':
+                        await global.set({synchronicity : false});
+                        console.log('synchronicity:', global.get('synchronicity'));
+                        break;
+                    default:
+                        break;
+                }
+              }}
+            ></sc-radio>
         </div>
 
         <div>
@@ -170,8 +225,8 @@ async function main($container) {
             class="test-text"
           >Volume (dB)</sc-text>
           <sc-slider
-            min="-60"
-            max="6"
+            min=${global.getDescription('volume').min}
+            max=${global.getDescription('volume').max}
             .value=${global.get('volume')}
             step="0.1"
             number-box=true

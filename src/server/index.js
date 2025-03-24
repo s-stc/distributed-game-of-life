@@ -114,7 +114,7 @@ function gameLoop() {
 const sync = await server.pluginManager.get('sync');
 // faire en sorte que lorsqu'on clique sur "Start" ou "Delay", on génère un "startTime" dans l'état global
 server.stateManager.registerUpdateHook('global', updates => {
-  if ('isPlaying' in updates || 'delay' in updates) {
+  if ('isPlaying' in updates || 'delay' in updates || 'random' in updates) {
     const startTime = sync.getSyncTime();
 
     return {
