@@ -16,7 +16,7 @@ export default {
       event: true,
     },
 
-    pattern:{
+    pattern: {
       type: 'any',
       event: true,
     },
@@ -67,12 +67,14 @@ export default {
       default: 0,
     },
 
-    filterMode:{
-      type: 'boolean',
-      default: false,
+    filterMode: {
+      type: 'integer',
+      min: 0,
+      max: 1,
+      default: 0,
     },
 
-    reverb:{
+    reverb: {
       type:'float',
       min: 0,
       max: 1,

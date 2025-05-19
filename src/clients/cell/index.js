@@ -3,7 +3,7 @@ import { Client } from '@soundworks/core/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
 
-import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js';
+import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js'; // for resuming audiocontext in browser
 import pluginSync from '@soundworks/plugin-sync/client.js';
 import pluginCheckin from '@soundworks/plugin-checkin/client.js';
 
@@ -13,6 +13,10 @@ import { generateCoordinates } from '../../lib/hostnameToCoordinates.js';
 import sonificationStrategies from '../../lib/sonificationStrategies.js';
 import { Reverb, Filter } from '../../lib/sonification.js';
 import { decibelToLinear } from '@ircam/sc-utils';
+
+import { phonemeWaveTable } from '../../../public/wave-tables/Phoneme_bah.js';
+import { organWaveTable} from '../../../public/wave-tables/Organ_2.js';
+import { celesteWaveTable} from '../../../public/wave-tables/celeste.js';
 
 import '@ircam/sc-components/sc-text.js';
 import '@ircam/sc-components/sc-number.js';
@@ -66,9 +70,15 @@ async function main($container) {
     mode2Buffer: await loader.load(`audio/mode2sample${x}.wav`),
     birdsBuffer: await loader.load(`audio/birds.wav`),
     modalBuffer: await loader.load(`audio/modalsample${y}${x}.wav`),
+    pianoBuffer: await loader.load(`audio/prepared_piano_${y}${x}.wav`),
   };
   const IR = {
     veryLargeAmbience: await loader.load(`audio/IR_VeryLargeAmbience.wav`)
+  }
+
+  const wavetables = {
+    phonemeWaveTable,
+    organWaveTable,
   }
 
   // paramètres sonores génériques
@@ -88,7 +98,12 @@ async function main($container) {
   noverb.connect(masterVolume);
 
   const filter = new Filter(audioContext, gridLength, x, y);
-
+  const noFilter = audioContext.createGain();
+  noFilter.gain.value = 1 - global.get('filterMode');
+  noFilter.connect(noverb);
+  noFilter.connect(reverb.input);
+  filter.connect(noverb);
+  filter.connect(reverb.input);
 
 
   const processor = (schedulerTime, audioTime) => { // pourquoi audioTime ?
@@ -99,7 +114,7 @@ async function main($container) {
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
         console.log('pouet');
-        sonificationStrategies[sonification](audioContext, global, buffers, filter, noverb, reverb, x, y);
+        sonificationStrategies[sonification](audioContext, global, buffers, noFilter, filter, wavetables, x, y);
         $container.style.backgroundColor = 'purple';
         setTimeout(() => {
           $container.style.backgroundColor = 'black';
@@ -133,9 +148,14 @@ async function main($container) {
         }
         case 'reverb': {
           const now = audioContext.currentTime;
-            reverb.output.gain.setTargetAtTime(value, now, 0.01);
-            noverb.gain.setTargetAtTime(1 - value, now, 0.01);
+          reverb.output.gain.setTargetAtTime(value, now, 0.01);
+          noverb.gain.setTargetAtTime(1 - value, now, 0.01);
           break;
+        }
+        case 'filterMode': {
+          const now = audioContext.currentTime;
+          filter.filterGain.gain.setTargetAtTime(value, now, 0.01);
+          noFilter.gain.setTargetAtTime(1 - value, now, 0.01);
         }
         default:
           break;

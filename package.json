@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@dotpi/led": "^3.1.2",
+    "@ircam/sc-audio": "^0.4.0",
     "@ircam/sc-components": "^3.0.0-alpha.60",
     "@ircam/sc-loader": "^1.1.0",
     "@ircam/sc-scheduling": "^1.0.0",

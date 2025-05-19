@@ -3,16 +3,15 @@ import {
   TriggerBuffer,
   TriggerBufferGranular,
   TriggerOsc,
-  Filter,
+  TriggerCustomOsc
 } from './sonification.js';
 
 // sonification
 const sonificationStrategies = {
   'mute': () => {},
-  'chromatic scale': (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'chromatic scale': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const gridLength = global.get('gridLength');
     const chromatic = new TriggerBuffer(audioContext, buffers.chromBuffer, gridLength, x, y, 100);
-    const filterMode = global.get('filterMode');
     const synchronicity = global.get('synchronicity');
     const random = 0;
     if (synchronicity === true) {
@@ -20,18 +19,11 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    if (filterMode === true) {
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      chromatic.connect(filter.filter);
-      chromatic.trigger(random);
-    } else {
-      chromatic.connect(reverb.input);
-      chromatic.connect(noverb);
-      chromatic.trigger(random);
-    };
+    chromatic.connect(filter.filter);
+    chromatic.connect(noFilter);
+    chromatic.trigger(random);
   },
-  'filter-option': (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'chromatic 2': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const gridLength = global.get('gridLength');
     const chromaticSampler = new TriggerBuffer(audioContext, buffers.chromBuffer, gridLength, x, y, 0);
     const synchronicity = global.get('synchronicity');
@@ -41,19 +33,27 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    const filterMode = global.get('filterMode');
-    if (filterMode === true) {
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      chromaticSampler.connect(filter.filter);
-      chromaticSampler.trigger(random);
-    } else {
-      chromaticSampler.connect(reverb.input);
-      chromaticSampler.connect(noverb);
-      chromaticSampler.trigger(random);
-    };
+    chromaticSampler.connect(filter.filter);
+    chromaticSampler.connect(noFilter);
+    chromaticSampler.trigger(random);
   },
-  'whole-tone scale': (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'random': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => { // ne fonctionne pas pour le moment
+    const gridLength = global.get('gridLength');
+    const arrayBuffers = Object.values(buffers);
+    const rand = Math.floor(Math.random() * arrayBuffers.length);
+    const randomSound = new TriggerBuffer(audioContext, arrayBuffers[rand], gridLength, x, y, 100);
+    const synchronicity = global.get('synchronicity');
+    const random = 0;
+    if (synchronicity === true) {
+      random = 0;
+    } else {
+      random = Math.random();
+    };
+    randomSound.connect(filter.filter);
+    randomSound.connect(noFilter);
+    randomSound.trigger(random);
+  },
+  'whole-tone scale': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const gridLength = global.get('gridLength');
     const wholeTone = new TriggerBuffer(audioContext, buffers.mode1Buffer, gridLength, x, y, 200);
     const synchronicity = global.get('synchronicity');
@@ -63,19 +63,11 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    const filterMode = global.get('filterMode');
-    if (filterMode === true) {
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      wholeTone.connect(filter.filter);
-      wholeTone.trigger(random);
-    } else {
-      wholeTone.connect(reverb.input);
-      wholeTone.connect(noverb);
-      wholeTone.trigger(random);
-    };
+    wholeTone.connect(filter.filter);
+    wholeTone.connect(noFilter);
+    wholeTone.trigger(random);
   },
-  'octatonic scale': (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'octatonic scale': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const gridLength = global.get('gridLength');
     const octatonic = new TriggerBuffer(audioContext, buffers.mode2Buffer, gridLength, x, y, 500);
     const synchronicity = global.get('synchronicity');
@@ -85,19 +77,11 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    const filterMode = global.get('filterMode');
-    if (filterMode === true){
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      octatonic.connect(filter.filter);
-      octatonic.trigger(random);
-    } else {
-      octatonic.connect(reverb.input);
-      octatonic.connect(noverb);
-      octatonic.trigger(random);
-    };
+    octatonic.connect(filter.filter);
+    octatonic.connect(noFilter);
+    octatonic.trigger(random);
   },
-  'modal scale' : (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'modal scale' : (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const gridLength = global.get('gridLength');
     const modal = new TriggerBuffer(audioContext, buffers.modalBuffer, gridLength, x, y, 0);
     const synchronicity = global.get('synchronicity');
@@ -107,35 +91,33 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    const filterMode = global.get('filterMode');
-    if (filterMode === true) {
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      modal.connect(filter.filter);
-      modal.trigger(random);
-    } else {
-      modal.connect(reverb.input);
-      modal.connect(noverb);
-      modal.trigger(random);
-    };
+    modal.connect(filter.filter);
+    modal.connect(noFilter);
+    modal.trigger(random);
   },
-  'birds': (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'prepared piano': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
+    const gridLength = global.get('gridLength');
+    const chromatic = new TriggerBuffer(audioContext, buffers.pianoBuffer, gridLength, x, y, 100);
+    const synchronicity = global.get('synchronicity');
+    const random = 0;
+    if (synchronicity === true) {
+      random = 0;
+    } else {
+      random = Math.random();
+    };
+    chromatic.connect(filter.filter);
+    chromatic.connect(noFilter);
+    chromatic.trigger(random);
+  },
+  'birds': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const period = global.get('delay');
     const gridLength = global.get('gridLength');
-    const filterMode = global.get('filterMode');
     const granular = new TriggerBufferGranular(audioContext, buffers.birdsBuffer, gridLength, x, y, 100, period);
-    if (filterMode === true) {
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      granular.connect(filter.filter);
-      granular.trigger();
-    } else {
-      granular.connect(reverb.input);
-      granular.connect(noverb);
-      granular.trigger();
-    };
+    granular.connect(filter.filter);
+    granular.connect(noFilter);
+    granular.trigger();
   },
-  'oscillators': (audioContext, global, buffers, filter, noverb, reverb, x, y) => {
+  'oscillators': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
     const gridLength = global.get('gridLength');
     const osc = new TriggerOsc(audioContext, gridLength, x, y);
     const synchronicity = global.get('synchronicity');
@@ -145,18 +127,42 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    const filterMode = global.get('filterMode');
-    if (filterMode === true){
-      filter.connect(reverb.input);
-      filter.connect(noverb);
-      osc.connect(filter.filter);
-      osc.trigger(random);
-    } else{
-      osc.connect(reverb.input);
-      osc.connect(noverb);
-      osc.trigger(random);
-    };
+    osc.connect(filter.filter);
+    osc.connect(noFilter);
+    osc.trigger(random);
   },
+  'phoneme': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
+    const gridLength = global.get('gridLength');
+    const synchronicity = global.get('synchronicity');
+    const random = 0;
+    const wavetable = wavetables.phonemeWaveTable;
+    const wave = new PeriodicWave(audioContext, {real: wavetable.real, imag: wavetable.imag});
+    const osc = new TriggerCustomOsc(audioContext, gridLength, x, y, wave);
+    if (synchronicity === true) {
+      random = 0;
+    } else {
+      random = Math.random();
+    };
+    osc.connect(filter.filter);
+    osc.connect(noFilter);
+    osc.trigger(random);
+  },
+  'organ': (audioContext, global, buffers, noFilter, filter, wavetables, x, y) => {
+    const gridLength = global.get('gridLength');
+    const synchronicity = global.get('synchronicity');
+    const random = 0;
+    const wavetable = wavetables.organWaveTable;
+    const wave = new PeriodicWave(audioContext, {real: wavetable.real, imag: wavetable.imag});
+    const osc = new TriggerCustomOsc(audioContext, gridLength, x, y, wave);
+    if (synchronicity === true) {
+      random = 0;
+    } else {
+      random = Math.random();
+    };
+    osc.connect(filter.filter);
+    osc.connect(noFilter);
+    osc.trigger(random);
+  }
 };
 
 export default sonificationStrategies;

@@ -1,5 +1,6 @@
 import '@soundworks/helpers/polyfills.js';
 import { Client } from '@soundworks/core/client.js';
+import ClientPluginFilesystem from '@soundworks/plugin-filesystem/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
 
@@ -12,6 +13,7 @@ import '@ircam/sc-components/sc-radio.js';
 import '@ircam/sc-components/sc-slider.js';
 import '@ircam/sc-components/sc-transport.js';
 import '@ircam/sc-components/sc-toggle.js';
+import '@ircam/sc-components/sc-record.js';
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -25,6 +27,8 @@ async function main($container) {
   const config = loadConfig();
   const client = new Client(config);
 
+  // client.pluginManager.register('filesystem', ClientPluginFilesystem, {})
+
   launcher.register(client, {
     initScreensContainer: $container,
     reloadOnVisibilityChange: false,
@@ -33,8 +37,35 @@ async function main($container) {
   await client.start();
 
   const global = await client.stateManager.attach('global');
-//   const cells = await client.stateManager.getCollection('cell');
+//   const filesystem = await client.pluginManager.get('filesystem');
 
+//   const audioContext = new AudioContext();
+
+// //microphone
+//   let micStream
+//   try {
+//     micStream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+//     console.log('access to microphone granted');
+//   } catch (err) {
+//     console.log(err);
+//   }
+
+//   const mediaRecorder = new MediaRecorder(micStream); // methods: .start(), .stop(), .pause(), .resume()
+//   const fileReader = new FileReader();
+//   const recordedBuffer = [];
+
+//   mediaRecorder.ondataavailable = (e) => {
+//     if (e.data.size > 0) {
+//       fileReader.readAsArrayBuffer(e.data) // blob transformé en array
+//     }
+//   };
+
+//   fileReader.onloadend = async function (e) {
+//     recordedBuffer = await audioContext.decodeAudioData(fileReader.result)
+//   };
+
+//   const blob = new Blob(recordedBuffer, {}); // array transformé en blob
+//   filesystem.writeFile('file.wav', blob);
 
   function renderApp() {
     render(html`
@@ -131,12 +162,47 @@ async function main($container) {
               <sc-toggle
                 ?active=${global.get('filterMode')}
                 @change=${async function (e) {
-                  await global.set({filterMode: e.detail.value});
-                  console.log('filterMode:', global.get('filterMode'));
+                  if (e.detail.value === true) {
+                    await global.set({filterMode: 1});
+                    console.log('filterMode:', global.get('filterMode'));
+                  } else {
+                    await global.set({filterMode: 0});
+                    console.log('filterMode:', global.get('filterMode'));
+                  }
                   renderApp();
                 }}
               ></sc-toggle>
           </div>
+
+          <!-- <div>
+            <sc-text
+             class='test-text'
+            >Recording</sc-text>
+            <sc-record
+              @change=${(e) => {
+                e.detail.value ? mediaRecorder.start() : mediaRecorder.stop();
+                console.log('recorder:', mediaRecorder.state);
+              }}
+            ></sc-record>
+
+            <sc-transport
+              .buttons=${["play", "pause"]}
+              @change=${(e) => {}}
+            ></sc-transport>
+
+            <sc-text
+              class='test-text'
+              style="
+                margin-top: 10px;
+                width: 70%;
+              "
+              editable
+            >write filename (without suffix)</sc-text>
+
+            <sc-button
+              class='test-button'
+            >upload file</sc-button>
+          </div> -->
 
           <div>
             <sc-text

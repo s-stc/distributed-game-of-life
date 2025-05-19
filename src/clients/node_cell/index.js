@@ -11,6 +11,12 @@ import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/h
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import sonificationStrategies from '../../lib/sonificationStrategies.js';
+import { Reverb, Filter } from '../../lib/sonification.js';
+import { decibelToLinear } from '@ircam/sc-utils';
+
+import { phonemeWaveTable } from '../../../public/wave-tables/Phoneme_bah.js';
+import { organWaveTable} from '../../../public/wave-tables/Organ_2.js';
+
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -24,12 +30,8 @@ async function bootstrap() {
 
   const audioContext = new AudioContext();
 
-  /**
-   * Register some soundworks plugins, you will need to install the plugins
-   * before hand (run `npx soundworks` for help)
-   */
-  // client.pluginManager.register('my-plugin', plugin);
 
+  // plugin registration
   client.pluginManager.register('checkin', pluginCheckin);
   client.pluginManager.register('sync', pluginSync, {
     getTimefunction: () => audioContext.currentTime,
@@ -43,13 +45,13 @@ async function bootstrap() {
   console.log(`Hello ${client.config.app.name}!`);
 
   // initialisation
-  const global = await client.stateManager.attach('global');
   const checkin = await client.pluginManager.get('checkin');
-  const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname());
+  const sync = await client.pluginManager.get('sync');
+  const global = await client.stateManager.attach('global');
   const gridLength = global.get('gridLength');
+  const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname());
   const realCoords = generateHostnamesToCoordinates(gridLength);
   const emulatedCoords = generateCoordinates(gridLength);
-  const sync = await client.pluginManager.get('sync');
   const scheduler = new Scheduler(() => sync.getSyncTime(), {
     currentTimeToProcessorTimeFunction: syncTime => sync.getLocalTime(syncTime),
   });
@@ -77,20 +79,51 @@ async function bootstrap() {
     mode2Buffer: await loader.load(`public/audio/mode2sample${x}.wav`),
     birdsBuffer: await loader.load(`public/audio/birds.wav`),
     modalBuffer: await loader.load(`public/audio/modalsample${y}${x}.wav`),
+    pianoBuffer: await loader.load(`public/audio/prepared_piano_${y}${x}.wav`),
   };
   const IR = {
     veryLargeAmbience: await loader.load(`public/audio/IR_VeryLargeAmbience.wav`)
   }
 
+  const wavetables = {
+    phonemeWaveTable,
+    organWaveTable,
+  }
+
+  // global audio parameters
+  const masterVolume = audioContext.createGain();
+  const volume = decibelToLinear(global.get('volume'));
+  masterVolume.gain.value = volume;
+  masterVolume.connect(audioContext.destination);
+
+  const reverbVolume = global.get('reverb');
+  const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
+  reverb.output.gain.value = reverbVolume;
+  reverb.connect(masterVolume);
+
+  const noverb = audioContext.createGain();
+  const noverbVolume = 1 - reverbVolume;
+  noverb.gain.value = noverbVolume;
+  noverb.connect(masterVolume);
+
+  const filter = new Filter(audioContext, gridLength, x, y);
+  const noFilter = audioContext.createGain();
+  noFilter.gain.value = 1 - global.get('filterMode');
+  noFilter.connect(noverb);
+  noFilter.connect(reverb.input);
+  filter.connect(noverb);
+  filter.connect(reverb.input);
+
+  //audio engine
   const processor = (schedulerTime, audioTime) => {
     const sonification = global.get('sonificationMode');
-    const grid = global.getUnsafe('grid');
+    const grid = global.getUnsafe('grid'); // pourquoi getUnsafe?
     const now = sync.getSyncTime();
 
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
         console.log('pouet');
-        sonificationStrategies[sonification](audioContext, global, buffers, IR, x, y);
+        sonificationStrategies[sonification](audioContext, global, buffers, noFilter, filter, wavetables, x, y);
         // $container.style.backgroundColor = 'purple'; // ajouter le code pour faire jouer des LEDs du R-Pi
         // setTimeout(() => {
         //   $container.style.backgroundColor = 'black';
@@ -114,6 +147,23 @@ async function bootstrap() {
             scheduler.remove(processor);
           }
           break;
+        }
+        case 'volume': {
+          const newVolume = decibelToLinear(value);
+          const now = audioContext.currentTime;
+          masterVolume.gain.setTargetAtTime(newVolume, now, 0.01);
+          break;
+        }
+        case 'reverb': {
+          const now = audioContext.currentTime;
+          reverb.output.gain.setTargetAtTime(value, now, 0.01);
+          noverb.gain.setTargetAtTime(1 - value, now, 0.01);
+          break;
+        }
+        case 'filterMode': {
+          const now = audioContext.currentTime;
+          filter.filterGain.gain.setTargetAtTime(value, now, 0.01);
+          noFilter.gain.setTargetAtTime(1 - value, now, 0.01);
         }
         default:
           break;
