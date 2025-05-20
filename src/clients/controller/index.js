@@ -1,6 +1,6 @@
 import '@soundworks/helpers/polyfills.js';
 import { Client } from '@soundworks/core/client.js';
-import ClientPluginFilesystem from '@soundworks/plugin-filesystem/client.js';
+// import ClientPluginFilesystem from '@soundworks/plugin-filesystem/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
 

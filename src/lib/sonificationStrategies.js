@@ -1,4 +1,3 @@
-// import { decibelToLinear } from '@ircam/sc-utils';
 import {
   TriggerBuffer,
   TriggerBufferGranular,
