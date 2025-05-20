@@ -162,13 +162,8 @@ async function main($container) {
               <sc-toggle
                 ?active=${global.get('filterMode')}
                 @change=${async function (e) {
-                  if (e.detail.value === true) {
-                    await global.set({filterMode: 1});
-                    console.log('filterMode:', global.get('filterMode'));
-                  } else {
-                    await global.set({filterMode: 0});
-                    console.log('filterMode:', global.get('filterMode'));
-                  }
+                  await global.set({filterMode: e.detail.value});
+                  console.log('filterMode:', global.get('filterMode'));
                   renderApp();
                 }}
               ></sc-toggle>

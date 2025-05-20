@@ -12,11 +12,12 @@ import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
 import sonificationStrategies from '../../lib/sonificationStrategies.js';
 import { Reverb, Filter } from '../../lib/sonification.js';
-import { decibelToLinear } from '@ircam/sc-utils';
+import { BypassNode, DistributorNode, VolumeNode } from '@ircam/sc-audio';
+
 
 import { phonemeWaveTable } from '../../../public/wave-tables/Phoneme_bah.js';
 import { organWaveTable} from '../../../public/wave-tables/Organ_2.js';
-
+import { celesteWaveTable } from '../../../public/wave-tables/celeste.js';
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -88,31 +89,26 @@ async function bootstrap() {
   const wavetables = {
     phonemeWaveTable,
     organWaveTable,
+    celesteWaveTable,
   }
 
   // global audio parameters
-  const masterVolume = audioContext.createGain();
-  const volume = decibelToLinear(global.get('volume'));
-  masterVolume.gain.value = volume;
+  const masterVolume = new VolumeNode(audioContext);
+  const volume = global.get('volume');
+  masterVolume.volume = volume;
   masterVolume.connect(audioContext.destination);
 
-  const reverbVolume = global.get('reverb');
   const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
-  reverb.output.gain.value = reverbVolume;
   reverb.connect(masterVolume);
-
-  const noverb = audioContext.createGain();
-  const noverbVolume = 1 - reverbVolume;
-  noverb.gain.value = noverbVolume;
-  noverb.connect(masterVolume);
+  const reverbVolume = global.get('reverb');
+  const dryWet = new DistributorNode(audioContext, { ratio: reverbVolume });
+  dryWet.connect(masterVolume, 0);
+  dryWet.connect(reverb.input, 1);
 
   const filter = new Filter(audioContext, gridLength, x, y);
-  const noFilter = audioContext.createGain();
-  noFilter.gain.value = 1 - global.get('filterMode');
-  noFilter.connect(noverb);
-  noFilter.connect(reverb.input);
-  filter.connect(noverb);
-  filter.connect(reverb.input);
+  const bypass = new BypassNode(audioContext, { active : true });
+  bypass.connect(dryWet);
+  bypass.subGraphInput.connect(filter.filter).connect(bypass.subGraphOutput);
 
   //audio engine
   const processor = (schedulerTime, audioTime) => {
@@ -123,7 +119,7 @@ async function bootstrap() {
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
         console.log('pouet');
-        sonificationStrategies[sonification](audioContext, global, buffers, noFilter, filter, wavetables, x, y);
+        sonificationStrategies[sonification](audioContext, global, buffers, bypass, wavetables, x, y);
         // $container.style.backgroundColor = 'purple'; // ajouter le code pour faire jouer des LEDs du R-Pi
         // setTimeout(() => {
         //   $container.style.backgroundColor = 'black';
@@ -149,21 +145,21 @@ async function bootstrap() {
           break;
         }
         case 'volume': {
-          const newVolume = decibelToLinear(value);
+          const newVolume = value;
           const now = audioContext.currentTime;
-          masterVolume.gain.setTargetAtTime(newVolume, now, 0.01);
+          masterVolume.volume.setTargetAtTime(newVolume, now, 0.01);
           break;
         }
         case 'reverb': {
           const now = audioContext.currentTime;
-          reverb.output.gain.setTargetAtTime(value, now, 0.01);
-          noverb.gain.setTargetAtTime(1 - value, now, 0.01);
+          dryWet.ratio.setTargetAtTime(value, now, 0.01);
           break;
         }
         case 'filterMode': {
           const now = audioContext.currentTime;
-          filter.filterGain.gain.setTargetAtTime(value, now, 0.01);
-          noFilter.gain.setTargetAtTime(1 - value, now, 0.01);
+          if (value === true) {
+            bypass.setActiveAtTime(false, now);
+          } else { bypass.setActiveAtTime(true, now); }
         }
         default:
           break;

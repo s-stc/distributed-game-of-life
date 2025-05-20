@@ -68,10 +68,8 @@ export default {
     },
 
     filterMode: {
-      type: 'integer',
-      min: 0,
-      max: 1,
-      default: 0,
+      type: 'boolean',
+      default: false,
     },
 
     reverb: {

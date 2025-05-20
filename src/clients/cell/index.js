@@ -12,11 +12,11 @@ import { Scheduler } from '@ircam/sc-scheduling';
 import { generateCoordinates } from '../../lib/hostnameToCoordinates.js';
 import sonificationStrategies from '../../lib/sonificationStrategies.js';
 import { Reverb, Filter } from '../../lib/sonification.js';
-import { decibelToLinear } from '@ircam/sc-utils';
+import { BypassNode, DistributorNode, VolumeNode } from '@ircam/sc-audio';
 
 import { phonemeWaveTable } from '../../../public/wave-tables/Phoneme_bah.js';
-import { organWaveTable} from '../../../public/wave-tables/Organ_2.js';
-import { celesteWaveTable} from '../../../public/wave-tables/celeste.js';
+import { organWaveTable } from '../../../public/wave-tables/Organ_2.js';
+import { celesteWaveTable } from '../../../public/wave-tables/celeste.js';
 
 import '@ircam/sc-components/sc-text.js';
 import '@ircam/sc-components/sc-number.js';
@@ -79,33 +79,29 @@ async function main($container) {
   const wavetables = {
     phonemeWaveTable,
     organWaveTable,
+    celesteWaveTable,
   }
 
   // paramètres sonores génériques
-  const masterVolume = audioContext.createGain();
-  const volume = decibelToLinear(global.get('volume'));
-  masterVolume.gain.value = volume;
+  const masterVolume = new VolumeNode(audioContext);
+  const volume = global.get('volume');
+  masterVolume.volume = volume;
   masterVolume.connect(audioContext.destination);
 
-  const reverbVolume = global.get('reverb');
   const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
-  reverb.output.gain.value = reverbVolume;
   reverb.connect(masterVolume);
-
-  const noverb = audioContext.createGain();
-  const noverbVolume = 1 - reverbVolume;
-  noverb.gain.value = noverbVolume;
-  noverb.connect(masterVolume);
+  const reverbVolume = global.get('reverb');
+  const dryWet = new DistributorNode(audioContext, { ratio: reverbVolume });
+  dryWet.connect(masterVolume, 0);
+  dryWet.connect(reverb.input, 1);
 
   const filter = new Filter(audioContext, gridLength, x, y);
-  const noFilter = audioContext.createGain();
-  noFilter.gain.value = 1 - global.get('filterMode');
-  noFilter.connect(noverb);
-  noFilter.connect(reverb.input);
-  filter.connect(noverb);
-  filter.connect(reverb.input);
+  const bypass = new BypassNode(audioContext, { active : true });
+  bypass.connect(dryWet);
+  bypass.subGraphInput.connect(filter.filter).connect(bypass.subGraphOutput);
 
 
+  //audio engine
   const processor = (schedulerTime, audioTime) => { // pourquoi audioTime ?
     const sonification = global.get('sonificationMode');
     const grid = global.get('grid');
@@ -114,7 +110,7 @@ async function main($container) {
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
         console.log('pouet');
-        sonificationStrategies[sonification](audioContext, global, buffers, noFilter, filter, wavetables, x, y);
+        sonificationStrategies[sonification](audioContext, global, buffers, bypass, wavetables, x, y);
         $container.style.backgroundColor = 'purple';
         setTimeout(() => {
           $container.style.backgroundColor = 'black';
@@ -141,21 +137,19 @@ async function main($container) {
           break;
         }
         case 'volume': {
-          const newVolume = decibelToLinear(value);
+          const newVolume = value;
           const now = audioContext.currentTime;
-          masterVolume.gain.setTargetAtTime(newVolume, now, 0.01); // probleme ça clique
+          masterVolume.volume.setTargetAtTime(newVolume, now, 0.01); // probleme ça clique
           break;
         }
         case 'reverb': {
           const now = audioContext.currentTime;
-          reverb.output.gain.setTargetAtTime(value, now, 0.01);
-          noverb.gain.setTargetAtTime(1 - value, now, 0.01);
+          dryWet.ratio.setTargetAtTime(value, now, 0.01);
           break;
         }
         case 'filterMode': {
           const now = audioContext.currentTime;
-          filter.filterGain.gain.setTargetAtTime(value, now, 0.01);
-          noFilter.gain.setTargetAtTime(1 - value, now, 0.01);
+
         }
         default:
           break;
