@@ -228,7 +228,6 @@ export class Reverb {
 
     this.dryGain = (this.gridLength - 1 - this.y) / (this.gridLength - 1);
     this.wetGain = this.y / (this.gridLength - 1);
-    console.log(this.dryGain, this.wetGain);
     this.dry.gain.value = this.dryGain;
     this.wet.gain.value = this.wetGain;
 

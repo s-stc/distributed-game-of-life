@@ -93,9 +93,8 @@ async function bootstrap() {
   }
 
   // global audio parameters
-  const masterVolume = new VolumeNode(audioContext);
   const volume = global.get('volume');
-  masterVolume.volume = volume;
+  const masterVolume = new VolumeNode(audioContext, { volume : volume});
   masterVolume.connect(audioContext.destination);
 
   const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);

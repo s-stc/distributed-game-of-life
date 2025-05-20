@@ -73,7 +73,6 @@ const sonificationStrategies = {
     } else {
       random = Math.random();
     };
-    oct
     octatonic.connect(bypass);
     octatonic.trigger(random);
   },

@@ -60,7 +60,7 @@ async function main($container) {
   x = data.x;
   y = data.y;
 
-  console.log(x,y);
+  console.log("x:", x, "y:", y);
 
   // téléchargement des fichiers sons
   const loader = new AudioBufferLoader(audioContext); // permet que ça marche aussi pour les clients node
@@ -83,9 +83,8 @@ async function main($container) {
   }
 
   // paramètres sonores génériques
-  const masterVolume = new VolumeNode(audioContext);
   const volume = global.get('volume');
-  masterVolume.volume = volume;
+  const masterVolume = new VolumeNode(audioContext, { volume : volume });
   masterVolume.connect(audioContext.destination);
 
   const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
@@ -149,7 +148,9 @@ async function main($container) {
         }
         case 'filterMode': {
           const now = audioContext.currentTime;
-
+          if (value === true){
+            bypass.setActiveAtTime(false, now);
+          } else { bypass.setActiveAtTime(true, now) }
         }
         default:
           break;
