@@ -6,6 +6,8 @@ import { html, render } from 'lit';
 import pluginPlatformInit from '@soundworks/plugin-platform-init/client.js'; // for resuming audiocontext in browser
 import pluginSync from '@soundworks/plugin-sync/client.js';
 import pluginCheckin from '@soundworks/plugin-checkin/client.js';
+import ClientPluginMixing from '@soundworks/plugin-mixing/client.js';
+
 
 import { AudioBufferLoader } from '@ircam/sc-loader';
 import { Scheduler } from '@ircam/sc-scheduling';
@@ -38,6 +40,10 @@ async function main($container) {
   client.pluginManager.register('sync', pluginSync, {
     getTimefunction: () => audioContext.currentTime,
   });
+  client.pluginManager.register('mixing', ClientPluginMixing, {
+    role: 'track',
+    audioContext,
+  })
 
   launcher.register(client, { initScreensContainer: $container });
 
@@ -46,6 +52,7 @@ async function main($container) {
   // initialisation
   const checkin = await client.pluginManager.get('checkin')
   const sync = await client.pluginManager.get('sync');
+  const mixing = await client.pluginManager.get('mixing');
   const global = await client.stateManager.attach('global');
   const gridLength = global.get('gridLength');
   const coordinates = generateCoordinates(gridLength);
@@ -68,7 +75,7 @@ async function main($container) {
     chromBuffer: await loader.load(`audio/sample${y}${x}.wav`),
     mode1Buffer: await loader.load(`audio/mode1sample${x}.wav`),
     mode2Buffer: await loader.load(`audio/mode2sample${x}.wav`),
-    birdsBuffer: await loader.load(`audio/birds.wav`),
+    birdsBuffer: await loader.load(`audio/mateo_birds.wav`),
     modalBuffer: await loader.load(`audio/modalsample${y}${x}.wav`),
     pianoBuffer: await loader.load(`audio/prepared_piano_${y}${x}.wav`),
   };
@@ -85,7 +92,7 @@ async function main($container) {
   // paramètres sonores génériques
   const volume = global.get('volume');
   const masterVolume = new VolumeNode(audioContext, { volume : volume });
-  masterVolume.connect(audioContext.destination);
+  masterVolume.connect(mixing.input);
 
   const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
   reverb.connect(masterVolume);
@@ -108,7 +115,7 @@ async function main($container) {
 
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
-        console.log('pouet');
+        // console.log('pouet');
         sonificationStrategies[sonification](audioContext, global, buffers, bypass, wavetables, x, y);
         $container.style.backgroundColor = 'purple';
         setTimeout(() => {

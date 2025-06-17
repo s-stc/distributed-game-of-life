@@ -4,6 +4,7 @@ import {
   TriggerOsc,
   TriggerCustomOsc
 } from './sonification.js';
+import { PeriodicWave } from 'isomorphic-web-audio-api';
 
 // sonification
 const sonificationStrategies = {
@@ -101,12 +102,25 @@ const sonificationStrategies = {
     chromatic.connect(bypass);
     chromatic.trigger(random);
   },
+  // 'birds': (audioContext, global, buffers, bypass, wavetables, x, y) => {
+  //   const period = global.get('delay');
+  //   const gridLength = global.get('gridLength');
+  //   const granular = new TriggerBufferGranular(audioContext, buffers.birdsBuffer, gridLength, x, y, 100, period);
+  //   granular.connect(bypass);
+  //   granular.trigger();
+  // },
   'birds': (audioContext, global, buffers, bypass, wavetables, x, y) => {
-    const period = global.get('delay');
     const gridLength = global.get('gridLength');
-    const granular = new TriggerBufferGranular(audioContext, buffers.birdsBuffer, gridLength, x, y, 100, period);
-    granular.connect(bypass);
-    granular.trigger();
+    const synth = new TriggerBuffer(audioContext, buffers.birdsBuffer, gridLength, x, y, 0);
+    const synchronicity = global.get('synchronicity');
+    let random = 0;
+    if (synchronicity === true) {
+      random = 0;
+    } else {
+      random = Math.random();
+    };
+    synth.connect(bypass);
+    synth.trigger(random);
   },
   'oscillators': (audioContext, global, buffers, bypass, wavetables, x, y) => {
     const gridLength = global.get('gridLength');

@@ -3,9 +3,14 @@ import os from 'node:os';
 import { Client } from '@soundworks/core/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/node.js';
 import { AudioContext } from 'node-web-audio-api';
-
+// import { Client as LEDClient } from '@dotpi/led/Client.js'
+import Led from '../../lib/Led.js';
 import pluginSync from '@soundworks/plugin-sync/client.js';
 import pluginCheckin from '@soundworks/plugin-checkin/client.js';
+import ClientPluginMixing from '@soundworks/plugin-mixing/client.js';
+
+import os from 'node:os';
+
 
 import { generateCoordinates, generateHostnamesToCoordinates } from '../../lib/hostnameToCoordinates.js';
 import { AudioBufferLoader } from '@ircam/sc-loader';
@@ -37,17 +42,25 @@ async function bootstrap() {
   client.pluginManager.register('sync', pluginSync, {
     getTimefunction: () => audioContext.currentTime,
   });
+  client.pluginManager.register('mixing', ClientPluginMixing, {
+    role: 'track',
+    audioContext,
+    label: os.hostname(),
+  });
 
 
   launcher.register(client);
 
   await client.start();
 
+  const ledClient = await LEDClient.create();
+
   console.log(`Hello ${client.config.app.name}!`);
 
   // initialisation
   const checkin = await client.pluginManager.get('checkin');
   const sync = await client.pluginManager.get('sync');
+  const mixing = await client.pluginManager.get('mixing');
   const global = await client.stateManager.attach('global');
   const gridLength = global.get('gridLength');
   const hostname = (typeof process.env.EMULATE !== 'undefined' ? 'emulated' : os.hostname());
@@ -78,7 +91,7 @@ async function bootstrap() {
     chromBuffer: await loader.load(`public/audio/sample${y}${x}.wav`),
     mode1Buffer: await loader.load(`public/audio/mode1sample${x}.wav`),
     mode2Buffer: await loader.load(`public/audio/mode2sample${x}.wav`),
-    birdsBuffer: await loader.load(`public/audio/birds.wav`),
+    birdsBuffer: await loader.load(`public/audio/mateo_birds.wav`),
     modalBuffer: await loader.load(`public/audio/modalsample${y}${x}.wav`),
     pianoBuffer: await loader.load(`public/audio/prepared_piano_${y}${x}.wav`),
   };
@@ -95,7 +108,7 @@ async function bootstrap() {
   // global audio parameters
   const volume = global.get('volume');
   const masterVolume = new VolumeNode(audioContext, { volume : volume});
-  masterVolume.connect(audioContext.destination);
+  masterVolume.connect(mixing.input);
 
   const reverb = new Reverb(audioContext, IR.veryLargeAmbience, gridLength, x, y);
   reverb.connect(masterVolume);
@@ -115,19 +128,28 @@ async function bootstrap() {
     const grid = global.getUnsafe('grid'); // pourquoi getUnsafe?
     const now = sync.getSyncTime();
 
+    //color definition
+    // const purple = {r: 255, g: 0, b: 255};
+    // const black = {r: 0, g: 0, b: 0};
+
     if (schedulerTime > now) {
       if (grid[y][x] === 1) {
-        console.log('pouet');
+        // console.log('pouet');
         sonificationStrategies[sonification](audioContext, global, buffers, bypass, wavetables, x, y);
-        // $container.style.backgroundColor = 'purple'; // ajouter le code pour faire jouer des LEDs du R-Pi
+        // //option couleur simple
+        // ledClient.fill(purple)
         // setTimeout(() => {
-        //   $container.style.backgroundColor = 'black';
-        // }, 50)
+        //   ledClient.fill(black);
+        // }, 50);
       }
     }
 
     return schedulerTime + global.get('delay') / 1000;
   };
+
+  //couleur liée au son
+  const led = new Led({ verbose: false });
+  led.init(audioContext, scheduler, masterVolume);
 
   global.onUpdate(updates => {
     for (let key in updates) {

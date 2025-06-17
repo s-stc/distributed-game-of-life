@@ -5,7 +5,8 @@ import { loadConfig, configureHttpRouter } from '@soundworks/helpers/server.js';
 import pluginPlatformInit from '@soundworks/plugin-platform-init/server.js';
 import pluginSync from '@soundworks/plugin-sync/server.js';
 import pluginCheckin from '@soundworks/plugin-checkin/server.js';
-import ServerPluginFilesystem from '@soundworks/plugin-filesystem/server.js';
+// import ServerPluginFilesystem from '@soundworks/plugin-filesystem/server.js';
+import ServerPluginMixing from '@soundworks/plugin-mixing/server.js';
 
 import globalSchema from './schemas/global.js';
 
@@ -48,6 +49,7 @@ const GRID_LENGTH = 6;
 
 server.pluginManager.register('platform-init', pluginPlatformInit);
 server.pluginManager.register('sync', pluginSync);
+server.pluginManager.register('mixing', ServerPluginMixing);
 // server.pluginManager.register('filesystem', ServerPluginFilesystem, {
 //   dirname: 'recorded_audio',
 //   // publicPath: '/public/'

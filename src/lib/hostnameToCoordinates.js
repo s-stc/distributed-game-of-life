@@ -24,8 +24,23 @@ export function generateHostnamesToCoordinates(gridSize) {
   const cellsCoordinates = new Map();
 
   for (let i = 1 ; i <= gridSize ; i++) {
-    for (let j = 1 ; j <= gridSize ; j++) {
-      const hostname = `dotpi-dev-0${j}${i}`;
+    for (let j = 1; j <= gridSize; j++) {
+      let basename;
+      switch (`${j}${i}`) {
+        case '32':
+        case '33':
+        case '34':
+        case '36':
+        case '41':
+        case '52':
+        case '66':
+          basename = 'murmures';
+          break;
+        default:
+          basename = 'dev'
+          break;
+      }
+      const hostname = `dotpi-${basename}-0${j}${i}`;
       cellsCoordinates.set(hostname, {x : j-1, y : i-1})
     }
   }

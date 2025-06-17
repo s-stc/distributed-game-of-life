@@ -4,6 +4,9 @@ import { Client } from '@soundworks/core/client.js';
 import { loadConfig, launcher } from '@soundworks/helpers/browser.js';
 import { html, render } from 'lit';
 
+import ClientPluginMixing from '@soundworks/plugin-mixing/client.js';
+
+
 import '@ircam/sc-components/sc-text.js';
 import '@ircam/sc-components/sc-number.js';
 import '@ircam/sc-components/sc-matrix.js';
@@ -15,6 +18,7 @@ import '@ircam/sc-components/sc-transport.js';
 import '@ircam/sc-components/sc-toggle.js';
 import '@ircam/sc-components/sc-switch.js';
 import '@ircam/sc-components/sc-record.js';
+import '@soundworks/plugin-mixing/components.js';
 
 // - General documentation: https://soundworks.dev/
 // - API documentation:     https://soundworks.dev/api
@@ -29,6 +33,9 @@ async function main($container) {
   const client = new Client(config);
 
   // client.pluginManager.register('filesystem', ClientPluginFilesystem, {})
+  client.pluginManager.register('mixing', ClientPluginMixing, {
+    role: 'controller',
+  })
 
   launcher.register(client, {
     initScreensContainer: $container,
@@ -36,7 +43,7 @@ async function main($container) {
   });
 
   await client.start();
-
+  const mixing = await client.pluginManager.get('mixing');
   const global = await client.stateManager.attach('global');
 //   const filesystem = await client.pluginManager.get('filesystem');
 
@@ -76,6 +83,9 @@ async function main($container) {
           <sw-audit .client="${client}"></sw-audit>
         </header>
         <section>
+          <sw-plugin-mixing
+           .plugin=${mixing}
+          ></sw-plugin-mixing>
           <sc-matrix
             class="test-matrix"
             .value=${global.get('grid')}
